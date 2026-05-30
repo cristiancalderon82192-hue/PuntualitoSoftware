@@ -11,6 +11,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.png'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5000000, // Aumentado a 5MB
+      },
       manifest: {
         name: 'Puntualito',
         short_name: 'Puntualito',
