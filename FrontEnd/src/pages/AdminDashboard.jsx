@@ -1,0 +1,228 @@
+import { useEffect, useState } from 'react';
+import api from '../services/api';
+import { Users, CheckCircle, Clock, XCircle, Coffee } from 'lucide-react';
+import { motion } from 'framer-motion';
+import dayjs from 'dayjs';
+
+const StatCard = ({ title, value, icon: Icon, colorClass, delay }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay }}
+    className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center space-x-4"
+  >
+    <div className={`p-4 rounded-xl ${colorClass}`}>
+      <Icon className="w-6 h-6 text-white" />
+    </div>
+    <div>
+      <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
+      <h3 className="text-3xl font-bold text-slate-800">{value}</h3>
+    </div>
+  </motion.div>
+);
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStats = async () => {
+      try {
+        const response = await api.get('/admin/stats');
+        if (isMounted) setStats(response.data);
+      } catch (err) {
+        if (isMounted) setError('Error al cargar las estadísticas');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchStats();
+    
+    // Poll every 5 seconds for real-time updates
+    const interval = setInterval(fetchStats, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <div className="p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-slate-800">Vista General de Hoy</h2>
+          <p className="text-slate-500">Métricas en tiempo real de la asistencia corporativa.</p>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="w-12 h-12 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100">{error}</div>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+              <StatCard 
+                title="Total Empleados" 
+                value={stats.estadisticas.totalEmpleados} 
+                icon={Users} 
+                colorClass="bg-blue-500"
+                delay={0.1}
+              />
+              <StatCard 
+                title="Llegaron Puntual" 
+                value={stats.estadisticas.puntuales} 
+                icon={CheckCircle} 
+                colorClass="bg-emerald-500"
+                delay={0.2}
+              />
+              <StatCard 
+                title="Llegaron Tarde" 
+                value={stats.estadisticas.tardes} 
+                icon={Clock} 
+                colorClass="bg-amber-500"
+                delay={0.3}
+              />
+              <StatCard 
+                title="En Almuerzo" 
+                value={stats.estadisticas.enAlmuerzo} 
+                icon={Coffee} 
+                colorClass="bg-purple-500"
+                delay={0.4}
+              />
+              <StatCard 
+                title="Ausentes (Aún no llegan)" 
+                value={stats.estadisticas.ausentes} 
+                icon={XCircle} 
+                colorClass="bg-rose-500"
+                delay={0.5}
+              />
+            </div>
+
+            {/* Recent Attendances Table */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800">Registros Recientes</h3>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-500 uppercase tracking-wider">
+                      <th className="px-6 py-4">Empleado</th>
+                      <th className="px-6 py-4">Sede</th>
+                      <th className="px-6 py-4">Hora de Entrada</th>
+                      <th className="px-6 py-4">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {stats.registrosRecientes.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="px-6 py-8 text-center text-slate-500">
+                          Nadie ha marcado asistencia el día de hoy.
+                        </td>
+                      </tr>
+                    ) : (
+                      stats.registrosRecientes.map((registro, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 font-medium text-slate-800">
+                            {registro.usuario.nombre} {registro.usuario.apellido}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {registro.sede.nombre}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                            {dayjs(registro.horaEntrada).format('hh:mm:ss A')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-2 items-center">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
+                                ${registro.estado.nombre === 'PUNTUAL' 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}
+                              >
+                                {registro.estado.nombre}
+                              </span>
+                              {registro.horaSalidaAlmuerzo && !registro.horaEntradaAlmuerzo && !registro.horaSalida && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200">
+                                  En Almuerzo
+                                </span>
+                              )}
+                              {registro.horaSalida && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-100 text-slate-600 border-slate-200">
+                                  Jornada Finalizada
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+
+            {/* Absent Employees Table */}
+            {stats.empleadosAusentes && stats.empleadosAusentes.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-6"
+              >
+                <div className="px-6 py-5 border-b border-slate-100">
+                  <h3 className="text-lg font-bold text-slate-800">Empleados Ausentes (Aún no llegan)</h3>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-500 uppercase tracking-wider">
+                        <th className="px-6 py-4">Empleado</th>
+                        <th className="px-6 py-4">Sede</th>
+                        <th className="px-6 py-4">Hora de Entrada</th>
+                        <th className="px-6 py-4">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {stats.empleadosAusentes.map((registro, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 font-medium text-slate-800">
+                            {registro.usuario.nombre} {registro.usuario.apellido}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {registro.sede.nombre}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                            -
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-rose-50 text-rose-700 border-rose-200">
+                              AUSENTE
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

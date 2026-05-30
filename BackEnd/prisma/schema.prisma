@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------
+// Tablas de Catálogos (Altamente Normalizadas)
+// ---------------------------------------------------------
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique // Ejemplo: "ADMIN", "EMPLEADO"
+  descripcion String?
+  usuarios    Usuario[]
+
+  @@map("roles")
+}
+
+model EstadoAsistencia {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @unique // Ejemplo: "PUNTUAL", "TARDE", "TEMPRANO", "AUSENTE"
+  descripcion String?
+  asistencias Asistencia[]
+
+  @@map("estados_asistencia")
+}
+
+// ---------------------------------------------------------
+// Tablas Principales de Configuración
+// ---------------------------------------------------------
+
+model Sede {
+  id             Int          @id @default(autoincrement())
+  nombre         String
+  direccion      String?
+  latitud        Decimal      @db.Decimal(10, 8) // Alta precisión para GPS
+  longitud       Decimal      @db.Decimal(11, 8)
+  radioPermitido Int          // Radio permitido en metros
+  activo         Boolean      @default(true)
+  creadoEn       DateTime     @default(now())
+  actualizadoEn  DateTime     @updatedAt
+
+  usuarios       Usuario[]
+  asistencias    Asistencia[]
+
+  @@map("sedes")
+}
+
+model Horario {
+  id                Int       @id @default(autoincrement())
+  nombre            String    // Ejemplo: "Lunes a Viernes Mañana"
+  horaInicio        String    // Formato "08:00:00"
+  horaFin           String    // Formato "17:00:00"
+  minutosTolerancia Int       @default(0) // Minutos de tolerancia antes de marcar TARDE
+  activo            Boolean   @default(true)
+
+  usuarios          Usuario[]
+
+  @@map("horarios")
+}
+
+// ---------------------------------------------------------
+// Entidades de Negocio
+// ---------------------------------------------------------
+
+model Usuario {
+  id            Int      @id @default(autoincrement())
+  documento     String   @unique // DNI, Cédula o Pasaporte
+  nombre        String
+  apellido      String
+  correo        String   @unique
+  contrasena    String
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  
+  horaInicioAlmuerzo String?  // Formato "12:00:00" (Opcional)
+  horaFinAlmuerzo    String?  // Formato "13:00:00" (Opcional)
+
+  // Relaciones (Claves Foráneas)
+  rolId         Int
+  rol           Rol      @relation(fields: [rolId], references: [id])
+  
+  sedeId        Int
+  sede          Sede     @relation(fields: [sedeId], references: [id])
+
+  horarioId     Int
+  horario       Horario  @relation(fields: [horarioId], references: [id])
+
+  asistencias   Asistencia[]
+
+  @@map("usuarios")
+}
+
+// ---------------------------------------------------------
+// Entidad Transaccional (Registros Diarios)
+// ---------------------------------------------------------
+
+model Asistencia {
+  id              Int      @id @default(autoincrement())
+  fecha           DateTime @db.Date // Solo la fecha (ej. 2026-05-28)
+  
+  horaEntrada     DateTime? // Hora exacta del registro de entrada
+  latitudEntrada  Decimal?  @db.Decimal(10, 8)
+  longitudEntrada Decimal?  @db.Decimal(11, 8)
+  
+  horaSalidaAlmuerzo     DateTime? // Inicio del almuerzo
+  latitudSalidaAlmuerzo  Decimal?  @db.Decimal(10, 8)
+  longitudSalidaAlmuerzo Decimal?  @db.Decimal(11, 8)
+
+  horaEntradaAlmuerzo     DateTime? // Fin del almuerzo
+  latitudEntradaAlmuerzo  Decimal?  @db.Decimal(10, 8)
+  longitudEntradaAlmuerzo Decimal?  @db.Decimal(11, 8)
+
+  horaSalida      DateTime? // Registro de salida final de la jornada
+  latitudSalida   Decimal?  @db.Decimal(10, 8)
+  longitudSalida  Decimal?  @db.Decimal(11, 8)
+
+  observaciones   String?   @db.Text
+  evidenciaUrl    String?   @db.Text
+
+  minutosExtra    Int       @default(0) // Registro de horas extras (en minutos)
+  minutosExtraAprobados Int?  // Minutos extra autorizados por el administrador
+  minutosTarde    Int       @default(0) // Registro de tardanzas (en minutos)
+
+  creadoEn        DateTime @default(now())
+
+  // Relaciones
+  usuarioId       Int
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+
+  sedeId          Int
+  sede            Sede     @relation(fields: [sedeId], references: [id])
+
+  estadoId        Int
+  estado          EstadoAsistencia @relation(fields: [estadoId], references: [id])
+
+  // Un usuario solo puede tener un registro principal por día
+  @@unique([usuarioId, fecha])
+  @@map("asistencias")
+}
