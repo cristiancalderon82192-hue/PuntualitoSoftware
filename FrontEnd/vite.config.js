@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logoitsoluciones.png'],
+      includeAssets: ['logo_puntualito.png'],
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000, // Aumentado a 5MB
       },
@@ -23,12 +23,12 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/logoitsoluciones.png',
+            src: '/logo_puntualito.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/logoitsoluciones.png',
+            src: '/logo_puntualito.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
