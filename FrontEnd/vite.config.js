@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.png'],
+      includeAssets: ['logoitsoluciones.png'],
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000, // Aumentado a 5MB
       },
@@ -23,12 +23,12 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/icon.png',
+            src: '/logoitsoluciones.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/icon.png',
+            src: '/logoitsoluciones.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
