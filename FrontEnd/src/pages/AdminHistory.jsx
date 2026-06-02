@@ -403,7 +403,7 @@ export default function AdminHistory() {
                     <th className="px-6 py-4">Empleado</th>
                     <th className="px-6 py-4">Sede</th>
                     <th className="px-6 py-4">Horarios Registrados</th>
-                    <th className="px-6 py-4">Horas Extras</th>
+                    <th className="px-6 py-4">{activeTab === 'tarde_almuerzo' ? 'Tiempo de Almuerzo' : 'Horas Extras'}</th>
                     <th className="px-6 py-4">Estado</th>
                     <th className="px-6 py-4">Observaciones</th>
                     <th className="px-6 py-4">Acciones</th>
@@ -427,37 +427,47 @@ export default function AdminHistory() {
                           <p className="text-sm text-slate-600">{a.sede.nombre}</p>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-xs space-y-1">
-                          {a.horaEntrada && <p><span className="text-slate-400">Entrada:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntrada).format('hh:mm A')}</span></p>}
+                          {activeTab !== 'tarde_almuerzo' && a.horaEntrada && <p><span className="text-slate-400">Entrada:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntrada).format('hh:mm A')}</span></p>}
                           {a.horaSalidaAlmuerzo && <p><span className="text-slate-400">Sale Almz:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalidaAlmuerzo).format('hh:mm A')}</span></p>}
                           {a.horaEntradaAlmuerzo && <p><span className="text-slate-400">Vuelve Almz:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntradaAlmuerzo).format('hh:mm A')}</span></p>}
-                          {a.horaSalida && <p><span className="text-slate-400">Salida:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalida).format('hh:mm A')}</span></p>}
+                          {activeTab !== 'tarde_almuerzo' && a.horaSalida && <p><span className="text-slate-400">Salida:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalida).format('hh:mm A')}</span></p>}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {a.minutosExtra > 0 ? (
-                            <div className="flex flex-col space-y-2">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 w-fit">
-                                Sistema: + {formatMinutes(a.minutosExtra)}
+                          {activeTab === 'tarde_almuerzo' ? (
+                            a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-50 text-slate-700 border-slate-200">
+                                {formatMinutes(dayjs(a.horaEntradaAlmuerzo).diff(dayjs(a.horaSalidaAlmuerzo), 'minute'))}
                               </span>
-                              {a.minutosExtraAprobados !== null ? (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">
-                                  Aprobado: {formatMinutes(a.minutosExtraAprobados)}
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    setApprovingExtra(a);
-                                    setExtraMinutesToApprove(a.minutosExtra);
-                                  }}
-                                  className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded shadow-sm w-fit transition-colors"
-                                >
-                                  Validar Extras
-                                </button>
-                              )}
-                            </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">En almuerzo...</span>
+                            )
                           ) : (
-                            <span className="text-xs text-slate-400 font-medium border border-transparent px-2.5 py-1">
-                              0m
-                            </span>
+                            a.minutosExtra > 0 ? (
+                              <div className="flex flex-col space-y-2">
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 w-fit">
+                                  Sistema: + {formatMinutes(a.minutosExtra)}
+                                </span>
+                                {a.minutosExtraAprobados !== null ? (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">
+                                    Aprobado: {formatMinutes(a.minutosExtraAprobados)}
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setApprovingExtra(a);
+                                      setExtraMinutesToApprove(a.minutosExtra);
+                                    }}
+                                    className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded shadow-sm w-fit transition-colors"
+                                  >
+                                    Validar Extras
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 font-medium border border-transparent px-2.5 py-1">
+                                0m
+                              </span>
+                            )
                           )}
                         </td>
                         <td className="px-6 py-4">
