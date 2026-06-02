@@ -267,6 +267,13 @@ export default function Dashboard() {
                   <span>Jornada Finalizada por Hoy</span>
                 </div>
               )}
+
+              {attendanceStatus === 'AUSENTE' && (
+                <div className="w-full bg-rose-50 text-rose-600 py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-lg border border-rose-200">
+                  <AlertCircle className="w-6 h-6" />
+                  <span>Has sido marcado como ausente hoy</span>
+                </div>
+              )}
             </div>
           )}
         </div>

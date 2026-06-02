@@ -44,6 +44,10 @@ const getAttendanceStatus = async (req, res) => {
       return res.json({ status: 'PENDIENTE_ENTRADA', asistencia: null, tieneAlmuerzo, sede: infoSede, timeLimits });
     }
 
+    if (asistencia.estado?.nombre === 'AUSENTE') {
+      return res.json({ status: 'AUSENTE', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits });
+    }
+
     const requireJustification = asistencia?.estado?.nombre === 'TARDE' && !asistencia.observaciones && !asistencia.evidenciaUrl;
     const yaAlmorzo = !!asistencia?.horaSalidaAlmuerzo;
 
