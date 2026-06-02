@@ -403,7 +403,7 @@ export default function AdminHistory() {
                     <th className="px-6 py-4">Empleado</th>
                     <th className="px-6 py-4">Sede</th>
                     <th className="px-6 py-4">Horarios Registrados</th>
-                    <th className="px-6 py-4">{activeTab === 'tarde_almuerzo' ? 'Tiempo de Almuerzo' : 'Horas Extras'}</th>
+                    <th className="px-6 py-4">{activeTab === 'tarde_almuerzo' ? 'Minutos de Tardanza' : 'Horas Extras'}</th>
                     <th className="px-6 py-4">Estado</th>
                     <th className="px-6 py-4">Observaciones</th>
                     <th className="px-6 py-4">Acciones</th>
@@ -434,11 +434,19 @@ export default function AdminHistory() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {activeTab === 'tarde_almuerzo' ? (
-                            a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-50 text-slate-700 border-slate-200">
-                                {formatMinutes(dayjs(a.horaEntradaAlmuerzo).diff(dayjs(a.horaSalidaAlmuerzo), 'minute'))}
-                              </span>
-                            ) : (
+                            a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo && a.usuario.horaFinAlmuerzo ? (() => {
+                              const limitTimeStr = a.usuario.horaFinAlmuerzo.length === 5 ? `${a.usuario.horaFinAlmuerzo}:00` : a.usuario.horaFinAlmuerzo;
+                              const returnObj = dayjs(a.horaEntradaAlmuerzo);
+                              const limitObj = dayjs(`${returnObj.format('YYYY-MM-DD')}T${limitTimeStr}`);
+                              const diff = returnObj.diff(limitObj, 'minute');
+                              return diff > 0 ? (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+                                  + {formatMinutes(diff)} tarde
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400 font-medium">0m tarde</span>
+                              );
+                            })() : (
                               <span className="text-xs text-slate-400 italic">En almuerzo...</span>
                             )
                           ) : (
@@ -472,13 +480,15 @@ export default function AdminHistory() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col space-y-2">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border w-fit ${
-                              isTarde ? 'bg-amber-50 text-amber-700 border-amber-200' : 
-                              isFalta ? 'bg-red-50 text-red-700 border-red-200' : 
-                              'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            }`}>
-                              Mañana: {a.estado.nombre}
-                            </span>
+                            {activeTab !== 'tarde_almuerzo' && (
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border w-fit ${
+                                isTarde ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                                isFalta ? 'bg-red-50 text-red-700 border-red-200' : 
+                                'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}>
+                                Mañana: {a.estado.nombre}
+                              </span>
+                            )}
                             {a.tardeAlmuerzo && (
                               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border w-fit bg-red-50 text-red-700 border-red-200">
                                 Tarde de Almuerzo
