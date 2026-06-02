@@ -93,6 +93,7 @@ model Usuario {
 
   asistencias   Asistencia[]
 
+  @@index([activo])
   @@map("usuarios")
 }
 
@@ -141,5 +142,6 @@ model Asistencia {
 
   // Un usuario solo puede tener un registro principal por día
   @@unique([usuarioId, fecha])
+  @@index([fecha])
   @@map("asistencias")
 }

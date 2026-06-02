@@ -142,7 +142,7 @@ export default function AdminDashboard() {
                             {registro.sede.nombre}
                           </td>
                           <td className="px-6 py-4 text-slate-600 font-mono text-sm">
-                            {dayjs(registro.horaEntrada).format('hh:mm:ss A')}
+                            {registro.horaEntrada ? dayjs(registro.horaEntrada).format('hh:mm:ss A') : '--:--'}
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-wrap gap-2 items-center">

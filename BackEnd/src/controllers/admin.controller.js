@@ -1,29 +1,84 @@
 const prisma = require('../config/db');
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
 const bcrypt = require('bcrypt');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
+dayjs.tz.setDefault(EMPRESA_TZ);
 
 const getDashboardStats = async (req, res) => {
   try {
-    const hoy = new Date(dayjs().format('YYYY-MM-DD') + 'T00:00:00.000Z');
+    const hoy = new Date(dayjs.tz().format('YYYY-MM-DD') + 'T00:00:00.000Z');
 
-    // 1. Empleados Activos
-    const empleadosActivos = await prisma.usuario.findMany({
+    // 1. Total Empleados Activos (Consulta Count)
+    const totalEmpleados = await prisma.usuario.count({
       where: {
         activo: true,
         rol: { nombre: 'EMPLEADO' } // Solo contamos empleados, no admins
+      }
+    });
+
+    // 2. Asistencias Hoy (Count total)
+    const totalAsistenciasHoy = await prisma.asistencia.count({
+      where: { fecha: hoy, usuario: { rol: { nombre: 'EMPLEADO' } } }
+    });
+
+    // 3. Cálculos de Puntuales, Tardes y Almuerzo (Delegados a la BD)
+    const puntuales = await prisma.asistencia.count({
+      where: { fecha: hoy, estado: { nombre: 'PUNTUAL' }, usuario: { rol: { nombre: 'EMPLEADO' } } }
+    });
+
+    const tardes = await prisma.asistencia.count({
+      where: { fecha: hoy, estado: { nombre: 'TARDE' }, usuario: { rol: { nombre: 'EMPLEADO' } } }
+    });
+
+    const enAlmuerzo = await prisma.asistencia.count({
+      where: { 
+        fecha: hoy, 
+        horaSalidaAlmuerzo: { not: null }, 
+        horaEntradaAlmuerzo: null, 
+        horaSalida: null,
+        usuario: { rol: { nombre: 'EMPLEADO' } }
+      }
+    });
+    
+    // 4. Ausentes (Usuarios activos sin registro hoy o con registro AUSENTE)
+    const listaAusentes = await prisma.usuario.findMany({
+      where: {
+        activo: true,
+        rol: { nombre: 'EMPLEADO' },
+        OR: [
+          { asistencias: { none: { fecha: hoy } } },
+          { asistencias: { some: { fecha: hoy, estado: { nombre: 'AUSENTE' } } } }
+        ]
       },
       select: {
-        id: true,
         nombre: true,
         apellido: true,
         sede: { select: { nombre: true } }
       }
     });
-    const totalEmpleados = empleadosActivos.length;
 
-    // 2. Asistencias de hoy
-    const asistenciasHoy = await prisma.asistencia.findMany({
-      where: { fecha: hoy },
+    const ausentes = listaAusentes.length;
+
+    const empleadosAusentesData = listaAusentes.map(emp => ({
+      usuario: { nombre: emp.nombre, apellido: emp.apellido },
+      sede: { nombre: emp.sede?.nombre || 'No asignada' },
+      horaEntrada: null,
+      estado: { nombre: 'AUSENTE' }
+    }));
+
+    // 5. Registros Recientes (Paginados con take: 10, excluyendo ausencias automáticas/manuales)
+    const registrosRecientes = await prisma.asistencia.findMany({
+      where: { 
+        fecha: hoy, 
+        usuario: { rol: { nombre: 'EMPLEADO' } },
+        estado: { nombre: { not: 'AUSENTE' } }
+      },
+      take: 10,
       include: {
         usuario: {
           select: { id: true, nombre: true, apellido: true }
@@ -34,33 +89,16 @@ const getDashboardStats = async (req, res) => {
       orderBy: { horaEntrada: 'desc' }
     });
 
-    // 3. Cálculos de Puntuales y Tardes
-    const puntuales = asistenciasHoy.filter(a => a.estado.nombre === 'PUNTUAL').length;
-    const tardes = asistenciasHoy.filter(a => a.estado.nombre === 'TARDE').length;
-    const enAlmuerzo = asistenciasHoy.filter(a => a.horaSalidaAlmuerzo && !a.horaEntradaAlmuerzo && !a.horaSalida).length;
-    
-    // 4. Ausentes
-    const asistenciasIds = new Set(asistenciasHoy.map(a => a.usuario.id));
-    const listaAusentes = empleadosActivos.filter(emp => !asistenciasIds.has(emp.id));
-    const ausentes = listaAusentes.length;
-
-    const empleadosAusentesData = listaAusentes.map(emp => ({
-      usuario: { nombre: emp.nombre, apellido: emp.apellido },
-      sede: { nombre: emp.sede?.nombre || 'No asignada' },
-      horaEntrada: null,
-      estado: { nombre: 'AUSENTE' }
-    }));
-
     res.json({
       estadisticas: {
         totalEmpleados,
-        asistenciasHoy: asistenciasHoy.length,
+        asistenciasHoy: totalAsistenciasHoy,
         puntuales,
         tardes,
         enAlmuerzo,
         ausentes
       },
-      registrosRecientes: asistenciasHoy.slice(0, 10),
+      registrosRecientes,
       empleadosAusentes: empleadosAusentesData
     });
 

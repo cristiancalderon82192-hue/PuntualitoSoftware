@@ -7,6 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const authRoutes = require('./routes/auth.routes');
+const { startCronJobs } = require('./services/cron.service');
 
 // Middlewares
 app.use(cors());
@@ -25,6 +26,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/attendance', require('./routes/attendance.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/admin/settings', require('./routes/settings.routes'));
+
+// Inicializar tareas programadas (Cron Jobs)
+startCronJobs();
 
 // Start server
 app.listen(PORT, () => {
