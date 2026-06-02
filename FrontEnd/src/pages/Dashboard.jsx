@@ -37,6 +37,11 @@ export default function Dashboard() {
       
       if (res.data.requireJustification && res.data.asistencia) {
         setAsistenciaId(res.data.asistencia.id);
+        setJustifyType('ENTRADA');
+        setShowJustifyModal(true);
+      } else if (res.data.requireLunchJustification && res.data.asistencia) {
+        setAsistenciaId(res.data.asistencia.id);
+        setJustifyType('ALMUERZO');
         setShowJustifyModal(true);
       }
     } catch (e) {
@@ -58,6 +63,7 @@ export default function Dashboard() {
 
   // Estados para justificación
   const [showJustifyModal, setShowJustifyModal] = useState(false);
+  const [justifyType, setJustifyType] = useState('ENTRADA');
   const [asistenciaId, setAsistenciaId] = useState(null);
   const [observaciones, setObservaciones] = useState('');
   const [evidencia, setEvidencia] = useState(null);
@@ -104,6 +110,12 @@ export default function Dashboard() {
       
       if (response.data.isTarde && action === 'ENTRADA') {
         setAsistenciaId(response.data.asistencia.id);
+        setJustifyType('ENTRADA');
+        setShowJustifyModal(true);
+        loadStatus();
+      } else if (response.data.isTardeAlmuerzo && action === 'ENTRADA_ALMUERZO') {
+        setAsistenciaId(response.data.asistencia.id);
+        setJustifyType('ALMUERZO');
         setShowJustifyModal(true);
         loadStatus();
       } else {
@@ -131,6 +143,7 @@ export default function Dashboard() {
       const formData = new FormData();
       if (observaciones) formData.append('observaciones', observaciones);
       if (evidencia) formData.append('evidencia', evidencia);
+      formData.append('tipo', justifyType);
 
       await api.patch(`/attendance/${asistenciaId}/justify`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -352,7 +365,9 @@ export default function Dashboard() {
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-amber-800">Llegaste Tarde</h3>
+                  <h3 className="font-bold text-amber-800">
+                    {justifyType === 'ALMUERZO' ? 'Regresaste Tarde de Almorzar' : 'Llegaste Tarde'}
+                  </h3>
                   <p className="text-xs text-amber-600/80">Por favor, adjunta una justificación</p>
                 </div>
               </div>

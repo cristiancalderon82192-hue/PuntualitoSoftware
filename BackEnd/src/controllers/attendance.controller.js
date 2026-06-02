@@ -51,16 +51,27 @@ const getAttendanceStatus = async (req, res) => {
 
     const requireJustification = asistencia?.estado?.nombre === 'TARDE' && !asistencia.observaciones && !asistencia.evidenciaUrl;
     const yaAlmorzo = !!asistencia?.horaSalidaAlmuerzo;
+    
+    let requireLunchJustification = false;
+    if (asistencia?.horaEntradaAlmuerzo && usuario?.horaFinAlmuerzo) {
+      const limitTimeStr = usuario.horaFinAlmuerzo.length === 5 ? `${usuario.horaFinAlmuerzo}:00` : usuario.horaFinAlmuerzo;
+      const today = dayjs(asistencia.fecha).format('YYYY-MM-DD');
+      const limitObj = dayjs(`${today}T${limitTimeStr}`);
+      const returnObj = dayjs(asistencia.horaEntradaAlmuerzo);
+      if (returnObj.diff(limitObj, 'minute') > 0 && !asistencia.observacionesAlmuerzo && !asistencia.evidenciaAlmuerzoUrl) {
+        requireLunchJustification = true;
+      }
+    }
 
     if (asistencia.horaSalida) {
-      return res.json({ status: 'JORNADA_FINALIZADA', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, yaAlmorzo });
+      return res.json({ status: 'JORNADA_FINALIZADA', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo });
     }
 
     if (asistencia.horaSalidaAlmuerzo && !asistencia.horaEntradaAlmuerzo) {
-      return res.json({ status: 'EN_ALMUERZO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, yaAlmorzo });
+      return res.json({ status: 'EN_ALMUERZO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo });
     }
 
-    return res.json({ status: 'TRABAJANDO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, yaAlmorzo });
+    return res.json({ status: 'TRABAJANDO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo });
 
   } catch (error) {
     console.error('Error en getAttendanceStatus:', error);
@@ -181,7 +192,11 @@ const checkIn = async (req, res) => {
           minutosTarde: (asistenciaExistente.minutosTarde || 0) + minutosTardeAlmuerzo
         }
       });
-      return res.json({ mensaje: 'Regreso de almuerzo registrado', asistencia: asistenciaActualizada });
+      return res.json({ 
+        mensaje: 'Regreso de almuerzo registrado', 
+        asistencia: asistenciaActualizada,
+        isTardeAlmuerzo: minutosTardeAlmuerzo > 0
+      });
     }
 
     if (action === 'SALIDA') {
@@ -225,19 +240,25 @@ const checkIn = async (req, res) => {
 const justifyAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const { observaciones } = req.body;
+    const { observaciones, tipo } = req.body;
     const evidenciaUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!observaciones && !evidenciaUrl) {
       return res.status(400).json({ error: 'Debes enviar una observación o una imagen como evidencia' });
     }
 
+    const dataToUpdate = {};
+    if (tipo === 'ALMUERZO') {
+      if (observaciones) dataToUpdate.observacionesAlmuerzo = observaciones;
+      if (evidenciaUrl) dataToUpdate.evidenciaAlmuerzoUrl = evidenciaUrl;
+    } else {
+      if (observaciones) dataToUpdate.observaciones = observaciones;
+      if (evidenciaUrl) dataToUpdate.evidenciaUrl = evidenciaUrl;
+    }
+
     const asistenciaActualizada = await prisma.asistencia.update({
       where: { id: parseInt(id) },
-      data: {
-        observaciones: observaciones || null,
-        evidenciaUrl: evidenciaUrl
-      }
+      data: dataToUpdate
     });
 
     res.json({

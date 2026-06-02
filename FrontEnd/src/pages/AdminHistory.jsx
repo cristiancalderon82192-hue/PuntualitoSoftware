@@ -171,7 +171,8 @@ export default function AdminHistory() {
       'Sede': a.sede.nombre,
       'Estado (Día)': a.estado.nombre,
       'Tarde de Almuerzo': a.tardeAlmuerzo ? 'SÍ' : 'NO',
-      'Observaciones': a.observaciones || 'N/A'
+      'Observaciones (Mañana)': a.observaciones || 'N/A',
+      'Observaciones (Almuerzo)': a.observacionesAlmuerzo || 'N/A'
     }));
 
     // Preparar datos para Excel Consolidado
@@ -496,8 +497,12 @@ export default function AdminHistory() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title={a.observaciones}>
-                          {a.observaciones || <span className="italic text-slate-400">Sin observaciones</span>}
+                        <td className="px-6 py-4 text-xs text-slate-500 max-w-xs" title={a.observaciones || a.observacionesAlmuerzo}>
+                          <div className="space-y-1">
+                            {a.observaciones && <p><span className="font-semibold text-slate-700">Mañana:</span> <span className="truncate block">{a.observaciones}</span></p>}
+                            {a.observacionesAlmuerzo && <p><span className="font-semibold text-slate-700">Almuerzo:</span> <span className="truncate block">{a.observacionesAlmuerzo}</span></p>}
+                            {!a.observaciones && !a.observacionesAlmuerzo && <span className="italic text-slate-400">Sin observaciones</span>}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
@@ -507,7 +512,18 @@ export default function AdminHistory() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 flex items-center justify-center"
-                                title="Ver evidencia adjunta"
+                                title="Ver evidencia de la mañana"
+                              >
+                                <ImageIcon className="w-4 h-4" />
+                              </a>
+                            )}
+                            {a.evidenciaAlmuerzoUrl && (
+                              <a
+                                href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaAlmuerzoUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200 flex items-center justify-center"
+                                title="Ver evidencia del almuerzo"
                               >
                                 <ImageIcon className="w-4 h-4" />
                               </a>

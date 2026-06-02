@@ -124,6 +124,9 @@ model Asistencia {
   observaciones   String?   @db.Text
   evidenciaUrl    String?   @db.Text
 
+  observacionesAlmuerzo   String?   @db.Text
+  evidenciaAlmuerzoUrl    String?   @db.Text
+
   minutosExtra    Int       @default(0) // Registro de horas extras (en minutos)
   minutosExtraAprobados Int?  // Minutos extra autorizados por el administrador
   minutosTarde    Int       @default(0) // Registro de tardanzas (en minutos)
