@@ -250,16 +250,37 @@ export default function Dashboard() {
                 </>
               )}
 
-              {attendanceStatus === 'EN_ALMUERZO' && (
-                <button
-                  onClick={() => handleCheckIn('ENTRADA_ALMUERZO')}
-                  disabled={geoLoading || isSubmitting || successMsg}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-70"
-                >
-                  <CheckCircle className="w-6 h-6" />
-                  <span>Regreso de Almuerzo</span>
-                </button>
-              )}
+              {attendanceStatus === 'EN_ALMUERZO' && (() => {
+                let lunchLateMinutes = 0;
+                if (timeLimits?.horaFinAlmuerzo) {
+                  const limitTimeStr = timeLimits.horaFinAlmuerzo.length === 5 ? `${timeLimits.horaFinAlmuerzo}:00` : timeLimits.horaFinAlmuerzo;
+                  const today = currentTime.format('YYYY-MM-DD');
+                  const limitObj = dayjs(`${today}T${limitTimeStr}`);
+                  const diff = currentTime.diff(limitObj, 'minute');
+                  if (diff > 0) {
+                    lunchLateMinutes = diff;
+                  }
+                }
+                const isLate = lunchLateMinutes > 0;
+
+                return (
+                  <button
+                    onClick={() => handleCheckIn('ENTRADA_ALMUERZO')}
+                    disabled={geoLoading || isSubmitting || successMsg}
+                    className={`w-full text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-70 transition-all ${
+                      isLate ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'
+                    }`}
+                  >
+                    <CheckCircle className="w-6 h-6" />
+                    <span>
+                      {isLate 
+                        ? `Regreso de Almuerzo (${lunchLateMinutes}m tarde)` 
+                        : 'Regreso de Almuerzo'
+                      }
+                    </span>
+                  </button>
+                );
+              })()}
 
               {attendanceStatus === 'JORNADA_FINALIZADA' && (
                 <div className="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-lg border border-slate-200">

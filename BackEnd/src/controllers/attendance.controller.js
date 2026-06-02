@@ -37,6 +37,7 @@ const getAttendanceStatus = async (req, res) => {
 
     const timeLimits = {
       horaInicioAlmuerzo: usuario?.horaInicioAlmuerzo,
+      horaFinAlmuerzo: usuario?.horaFinAlmuerzo,
       horaFinJornada: usuario?.horario?.horaFin
     };
 
