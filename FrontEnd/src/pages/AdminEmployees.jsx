@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Plus, Edit2, Trash2, X, Check, Search, Camera } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check, Search, Camera, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FaceScanner from '../components/FaceScanner';
 
