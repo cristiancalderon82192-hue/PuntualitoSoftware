@@ -80,7 +80,7 @@ const getAttendanceStatus = async (req, res) => {
 
   } catch (error) {
     console.error('Error en getAttendanceStatus:', error);
-    res.status(500).json({ error: 'Error al obtener el estado de asistencia' });
+    res.status(500).json({ error: 'Error al obtener el estado de asistencia', details: error.message });
   }
 };
 

@@ -46,8 +46,9 @@ export default function Dashboard() {
         setJustifyType('ALMUERZO');
         setShowJustifyModal(true);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
+      setApiError(err.response?.data?.details || err.response?.data?.error || 'Error al cargar tu estado de asistencia. Recarga la página.');
     } finally {
       setStatusLoading(false);
     }
