@@ -20,7 +20,7 @@ export default function AdminLayout({ children }) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="h-screen overflow-hidden bg-slate-50 flex flex-col md:flex-row">
       {/* Sidebar Navigation */}
       <aside className="w-full md:w-64 bg-[#0b1021] flex-shrink-0 flex flex-col hidden md:flex">
         {/* Sidebar Header */}

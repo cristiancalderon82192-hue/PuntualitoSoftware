@@ -3,6 +3,8 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const bcrypt = require('bcrypt');
+const fs = require('fs');
+const path = require('path');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -179,10 +181,25 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor } = req.body;
+    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64 } = req.body;
     
     const hashedPassword = await bcrypt.hash(contrasena, 10);
     
+    let fotoPerfilUrl = null;
+    if (fotoBase64) {
+      const base64Data = fotoBase64.replace(/^data:image\/\w+;base64,/, "");
+      const filename = `perfil_${documento}_${Date.now()}.jpg`;
+      const uploadPath = path.join(__dirname, '../../public/uploads/perfiles', filename);
+      
+      const dir = path.dirname(uploadPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      fs.writeFileSync(uploadPath, base64Data, 'base64');
+      fotoPerfilUrl = `/uploads/perfiles/${filename}`;
+    }
+
     const nuevoUsuario = await prisma.usuario.create({
       data: {
         documento,
@@ -196,7 +213,8 @@ const createUser = async (req, res) => {
         horaInicioAlmuerzo: horaInicioAlmuerzo || null,
         horaFinAlmuerzo: horaFinAlmuerzo || null,
         activo: activo !== undefined ? activo : true,
-        rostroDescriptor
+        rostroDescriptor,
+        fotoPerfilUrl
       }
     });
     
@@ -213,7 +231,7 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor } = req.body;
+    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64 } = req.body;
     
     let dataToUpdate = {
       documento,
@@ -229,6 +247,20 @@ const updateUser = async (req, res) => {
 
     if (rostroDescriptor) {
       dataToUpdate.rostroDescriptor = rostroDescriptor;
+    }
+
+    if (fotoBase64) {
+      const base64Data = fotoBase64.replace(/^data:image\/\w+;base64,/, "");
+      const filename = `perfil_${documento}_${Date.now()}.jpg`;
+      const uploadPath = path.join(__dirname, '../../public/uploads/perfiles', filename);
+      
+      const dir = path.dirname(uploadPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      fs.writeFileSync(uploadPath, base64Data, 'base64');
+      dataToUpdate.fotoPerfilUrl = `/uploads/perfiles/${filename}`;
     }
 
     if (activo !== undefined) {

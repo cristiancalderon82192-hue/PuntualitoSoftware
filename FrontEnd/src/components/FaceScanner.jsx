@@ -77,8 +77,19 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
       if (detection) {
         if (intervalRef.current) clearInterval(intervalRef.current);
         const descriptorArray = Array.from(detection.descriptor);
+        
+        // Capturar la imagen actual del video
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width, 0); // Reflejar la imagen igual que en el video
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
         stopCamera();
-        onScanSuccess(JSON.stringify(descriptorArray));
+        onScanSuccess(JSON.stringify(descriptorArray), imageBase64);
       }
     } catch (err) {
       // Ignorar errores silenciosamente en el auto escaneo
@@ -99,8 +110,19 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
 
       if (detection) {
         const descriptorArray = Array.from(detection.descriptor);
+        
+        // Capturar la imagen actual del video
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.Height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width, 0); // Reflejar la imagen igual que en el video
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.Height);
+        const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
         stopCamera();
-        onScanSuccess(JSON.stringify(descriptorArray));
+        onScanSuccess(JSON.stringify(descriptorArray), imageBase64);
       } else {
         setError('No se detectó ningún rostro. Asegúrate de mirar directamente a la cámara con buena iluminación.');
         setIsScanning(false);

@@ -83,7 +83,8 @@ export default function AdminEmployees() {
         horaInicioAlmuerzo: '',
         horaFinAlmuerzo: '',
         activo: true,
-        rostroDescriptor: ''
+        rostroDescriptor: '',
+        fotoPerfilUrl: ''
       });
     }
     setIsModalOpen(true);
@@ -384,7 +385,7 @@ export default function AdminEmployees() {
                   </div>
 
                   <div className="col-span-1 md:col-span-2 mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="flex justify-between items-center mb-4">
                       <h4 className="font-medium text-slate-800 flex items-center">
                         <Camera className="w-4 h-4 mr-2 text-purple-600" />
                         Reconocimiento Facial
@@ -396,25 +397,26 @@ export default function AdminEmployees() {
                       )}
                     </div>
                     
-                    {!isScanningFace ? (
-                      <button 
-                        type="button" 
-                        onClick={() => setIsScanningFace(true)}
-                        className="w-full py-2.5 mt-2 border-2 border-dashed border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
-                      >
-                        {formValues.rostroDescriptor ? 'Actualizar Rostro' : 'Capturar Rostro para Login'}
-                      </button>
-                    ) : (
-                      <div className="mt-4">
-                        <FaceScanner 
-                          onScanSuccess={(descriptor) => {
-                            setFormValues({...formValues, rostroDescriptor: descriptor});
-                            setIsScanningFace(false);
-                          }}
-                          onCancel={() => setIsScanningFace(false)}
-                        />
+                    {/* Contenedor de la foto de perfil */}
+                    {(formValues.fotoBase64 || formValues.fotoPerfilUrl) && (
+                      <div className="flex justify-center mb-4">
+                        <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md">
+                          <img 
+                            src={formValues.fotoBase64 || `http://localhost:5000${formValues.fotoPerfilUrl}`} 
+                            alt="Foto de Perfil" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       </div>
                     )}
+
+                    <button 
+                      type="button" 
+                      onClick={() => setIsScanningFace(true)}
+                      className="w-full py-2.5 mt-2 border-2 border-dashed border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
+                    >
+                      {formValues.rostroDescriptor ? 'Actualizar Rostro' : 'Capturar Rostro para Login'}
+                    </button>
                   </div>
                 </form>
               </div>
@@ -435,6 +437,32 @@ export default function AdminEmployees() {
                   {editingEmployee ? 'Guardar Cambios' : 'Registrar Empleado'}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Escáner Facial (sobrepuesto) */}
+      <AnimatePresence>
+        {isScanningFace && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden ring-1 ring-white/10"
+            >
+              <FaceScanner 
+                onScanSuccess={(descriptor, imageBase64) => {
+                  setFormValues({
+                    ...formValues, 
+                    rostroDescriptor: descriptor,
+                    fotoBase64: imageBase64
+                  });
+                  setIsScanningFace(false);
+                }}
+                onCancel={() => setIsScanningFace(false)}
+              />
             </motion.div>
           </div>
         )}
