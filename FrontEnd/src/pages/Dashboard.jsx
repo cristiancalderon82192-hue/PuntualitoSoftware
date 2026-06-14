@@ -78,7 +78,6 @@ export default function Dashboard() {
   const [asistenciaId, setAsistenciaId] = useState(null);
   const [causaSeleccionada, setCausaSeleccionada] = useState('');
   const [observaciones, setObservaciones] = useState('');
-  const [evidencia, setEvidencia] = useState(null);
   const [isSubmittingJustification, setIsSubmittingJustification] = useState(false);
 
   const format12h = (timeStr) => {
@@ -160,7 +159,6 @@ export default function Dashboard() {
     try {
       const formData = new FormData();
       formData.append('observaciones', textoFinal);
-      if (evidencia && justifyType !== 'ALMUERZO') formData.append('evidencia', evidencia);
       formData.append('tipo', justifyType);
 
       await api.patch(`/attendance/${asistenciaId}/justify`, formData, {
@@ -432,34 +430,6 @@ export default function Dashboard() {
                       placeholder="Detalles opcionales..."
                     ></textarea>
                   </div>
-                  
-                  {justifyType !== 'ALMUERZO' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Evidencia Fotográfica</label>
-                      <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center hover:bg-slate-50 transition-colors">
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          capture="environment"
-                          onChange={e => setEvidencia(e.target.files[0])}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        {evidencia ? (
-                          <div className="text-center">
-                            <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                            <p className="text-sm font-medium text-slate-700 truncate max-w-[200px]">{evidencia.name}</p>
-                            <p className="text-xs text-emerald-600 mt-1">¡Foto cargada!</p>
-                          </div>
-                        ) : (
-                          <div className="text-center text-slate-500">
-                            <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm font-medium">Toca para tomar una foto</p>
-                            <p className="text-xs mt-1">o sube desde la galería</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </form>
               </div>
 
