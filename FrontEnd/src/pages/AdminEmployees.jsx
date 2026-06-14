@@ -83,8 +83,7 @@ export default function AdminEmployees() {
         horaInicioAlmuerzo: '',
         horaFinAlmuerzo: '',
         activo: true,
-        rostroDescriptor: '',
-        fotoPerfilUrl: ''
+        rostroDescriptor: ''
       });
     }
     setIsModalOpen(true);
@@ -395,26 +394,6 @@ export default function AdminEmployees() {
                         <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Sin Rostro</span>
                       )}
                     </div>
-
-                    {/* Contenedor de la foto de perfil */}
-                    {(formValues.fotoBase64 || formValues.fotoPerfilUrl) ? (
-                      <div className="flex justify-center mb-4">
-                        <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md">
-                          <img
-                            src={formValues.fotoBase64 || `http://localhost:5000${formValues.fotoPerfilUrl}`}
-                            alt="Foto de Perfil"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    ) : formValues.rostroDescriptor ? (
-                      <div className="flex flex-col items-center mb-4">
-                        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md bg-slate-200 flex items-center justify-center">
-                          <Users className="w-12 h-12 text-slate-400" />
-                        </div>
-                        <span className="text-xs text-amber-600 mt-2 text-center">Foto antigua no disponible.<br />Actualiza el rostro para guardarla.</span>
-                      </div>
-                    ) : null}
 
                     <button
                       type="button"
