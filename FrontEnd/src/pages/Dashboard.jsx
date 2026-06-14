@@ -243,8 +243,18 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
+              
+              {/* Mostrar errores del GPS si ocurren */}
+              {geoError && (
+                <div className="w-full bg-red-50 text-red-700 p-4 rounded-2xl flex flex-col items-center justify-center text-center border border-red-100 shadow-sm">
+                  <AlertCircle className="w-8 h-8 mb-2 text-red-500" />
+                  <p className="text-sm font-bold">{geoError}</p>
+                  <p className="text-xs mt-1 opacity-80">Por favor, revisa los permisos de ubicación o asegúrate de tener el GPS encendido.</p>
+                </div>
+              )}
+
               {attendanceStatus === 'PENDIENTE_ENTRADA' && (
-                apiError ? (
+                (apiError || geoError) ? (
                   <button 
                     onClick={() => handleCheckIn('ENTRADA')}
                     disabled={isSubmitting || geoLoading}
