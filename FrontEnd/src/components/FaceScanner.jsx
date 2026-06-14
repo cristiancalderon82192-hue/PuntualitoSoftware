@@ -70,14 +70,14 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
     if (!videoRef.current || !isModelsLoaded) return;
     try {
       const detection = await faceapi.detectSingleFace(
-        videoRef.current, 
+        videoRef.current,
         new faceapi.TinyFaceDetectorOptions()
       ).withFaceLandmarks().withFaceDescriptor();
 
       if (detection) {
         if (intervalRef.current) clearInterval(intervalRef.current);
         const descriptorArray = Array.from(detection.descriptor);
-        
+
         // Capturar la imagen actual del video
         const canvas = document.createElement('canvas');
         canvas.width = videoRef.current.videoWidth;
@@ -98,19 +98,19 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
 
   const scanFace = async () => {
     if (!videoRef.current || !isModelsLoaded) return;
-    
+
     setIsScanning(true);
     setError('');
 
     try {
       const detection = await faceapi.detectSingleFace(
-        videoRef.current, 
+        videoRef.current,
         new faceapi.TinyFaceDetectorOptions()
       ).withFaceLandmarks().withFaceDescriptor();
 
       if (detection) {
         const descriptorArray = Array.from(detection.descriptor);
-        
+
         // Capturar la imagen actual del video
         const canvas = document.createElement('canvas');
         canvas.width = videoRef.current.videoWidth;
@@ -142,7 +142,7 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
       </div>
 
       <h3 className="text-white font-medium mb-3">Escáner Facial</h3>
-      
+
       {!isModelsLoaded ? (
         <div className="w-full max-w-sm h-64 bg-slate-800 flex items-center justify-center rounded-lg border-2 border-dashed border-slate-600">
           <div className="text-slate-400 flex flex-col items-center">
@@ -152,14 +152,14 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
         </div>
       ) : (
         <div className="relative w-full max-w-sm rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg shadow-purple-500/20">
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            muted 
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
             playsInline
-            className="w-full h-auto object-cover transform scale-x-[-1]" 
+            className="w-full h-auto object-cover transform scale-x-[-1]"
           />
-          
+
           <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none rounded-lg">
             <div className="w-full h-full border-2 border-dashed border-white/50 rounded-[40%]"></div>
           </div>

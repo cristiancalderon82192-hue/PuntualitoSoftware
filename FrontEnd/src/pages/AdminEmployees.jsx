@@ -9,12 +9,12 @@ export default function AdminEmployees() {
   const [formData, setFormData] = useState({ roles: [], sedes: [], horarios: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [isScanningFace, setIsScanningFace] = useState(false);
-  
+
   // Form State
   const [formValues, setFormValues] = useState({
     documento: '',
@@ -119,8 +119,8 @@ export default function AdminEmployees() {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.nombre.toLowerCase().includes(search.toLowerCase()) || 
+  const filteredEmployees = employees.filter(emp =>
+    emp.nombre.toLowerCase().includes(search.toLowerCase()) ||
     emp.apellido.toLowerCase().includes(search.toLowerCase()) ||
     emp.documento.includes(search)
   );
@@ -133,7 +133,7 @@ export default function AdminEmployees() {
             <h2 className="text-2xl font-bold text-slate-800">Gestión de Empleados</h2>
             <p className="text-slate-500">Administra el acceso y asignación de todos los trabajadores.</p>
           </div>
-          <button 
+          <button
             onClick={() => handleOpenModal()}
             className="flex items-center justify-center space-x-2 bg-slate-800 text-white px-5 py-2.5 rounded-xl hover:bg-slate-700 transition-colors shadow-sm font-medium"
           >
@@ -199,23 +199,22 @@ export default function AdminEmployees() {
                       <td className="px-6 py-4">
                         <button
                           onClick={() => handleToggleStatus(emp.id)}
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                            emp.activo 
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${emp.activo
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                               : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                          }`}
+                            }`}
                         >
                           {emp.activo ? 'Activo' : 'Inactivo'}
                         </button>
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        <button 
+                        <button
                           onClick={() => handleOpenModal(emp)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleToggleStatus(emp.id)}
                           className={`p-2 rounded-lg transition-colors ${emp.activo ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
                           title={emp.activo ? "Desactivar" : "Activar"}
@@ -243,7 +242,7 @@ export default function AdminEmployees() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -264,23 +263,23 @@ export default function AdminEmployees() {
                     {formError}
                   </div>
                 )}
-                
+
                 <form id="employeeForm" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Documento (DNI/Cédula)</label>
-                    <input 
-                      required type="text" 
-                      value={formValues.documento} 
-                      onChange={e => setFormValues({...formValues, documento: e.target.value})}
+                    <input
+                      required type="text"
+                      value={formValues.documento}
+                      onChange={e => setFormValues({ ...formValues, documento: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Rol</label>
-                    <select 
-                      required value={formValues.rolId} 
-                      onChange={e => setFormValues({...formValues, rolId: e.target.value})}
+                    <select
+                      required value={formValues.rolId}
+                      onChange={e => setFormValues({ ...formValues, rolId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none bg-white"
                     >
                       {formData.roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
@@ -289,49 +288,49 @@ export default function AdminEmployees() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Nombres</label>
-                    <input 
-                      required type="text" 
-                      value={formValues.nombre} 
-                      onChange={e => setFormValues({...formValues, nombre: e.target.value})}
+                    <input
+                      required type="text"
+                      value={formValues.nombre}
+                      onChange={e => setFormValues({ ...formValues, nombre: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Apellidos</label>
-                    <input 
-                      required type="text" 
-                      value={formValues.apellido} 
-                      onChange={e => setFormValues({...formValues, apellido: e.target.value})}
+                    <input
+                      required type="text"
+                      value={formValues.apellido}
+                      onChange={e => setFormValues({ ...formValues, apellido: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico</label>
-                    <input 
-                      required type="email" 
-                      value={formValues.correo} 
-                      onChange={e => setFormValues({...formValues, correo: e.target.value})}
+                    <input
+                      required type="email"
+                      value={formValues.correo}
+                      onChange={e => setFormValues({ ...formValues, correo: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña {editingEmployee && <span className="text-xs text-slate-400 font-normal">(Dejar en blanco para no cambiar)</span>}</label>
-                    <input 
-                      required={!editingEmployee} type="password" 
-                      value={formValues.contrasena} 
-                      onChange={e => setFormValues({...formValues, contrasena: e.target.value})}
+                    <input
+                      required={!editingEmployee} type="password"
+                      value={formValues.contrasena}
+                      onChange={e => setFormValues({ ...formValues, contrasena: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Sede Asignada</label>
-                    <select 
-                      required value={formValues.sedeId} 
-                      onChange={e => setFormValues({...formValues, sedeId: e.target.value})}
+                    <select
+                      required value={formValues.sedeId}
+                      onChange={e => setFormValues({ ...formValues, sedeId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none bg-white"
                     >
                       {formData.sedes.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
@@ -340,9 +339,9 @@ export default function AdminEmployees() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Horario Asignado</label>
-                    <select 
-                      required value={formValues.horarioId} 
-                      onChange={e => setFormValues({...formValues, horarioId: e.target.value})}
+                    <select
+                      required value={formValues.horarioId}
+                      onChange={e => setFormValues({ ...formValues, horarioId: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none bg-white"
                     >
                       {formData.horarios.map(h => <option key={h.id} value={h.id}>{h.nombre}</option>)}
@@ -351,31 +350,31 @@ export default function AdminEmployees() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Hora Inicio Almuerzo (Opcional)</label>
-                    <input 
+                    <input
                       type="time" step="2"
-                      value={formValues.horaInicioAlmuerzo} 
-                      onChange={e => setFormValues({...formValues, horaInicioAlmuerzo: e.target.value})}
+                      value={formValues.horaInicioAlmuerzo}
+                      onChange={e => setFormValues({ ...formValues, horaInicioAlmuerzo: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Hora Fin Almuerzo (Opcional)</label>
-                    <input 
-                      type="time" 
-                      value={formValues.horaFinAlmuerzo} 
-                      onChange={e => setFormValues({...formValues, horaFinAlmuerzo: e.target.value})}
+                    <input
+                      type="time"
+                      value={formValues.horaFinAlmuerzo}
+                      onChange={e => setFormValues({ ...formValues, horaFinAlmuerzo: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
                     />
                   </div>
 
                   <div className="col-span-1 md:col-span-2 flex items-center mt-2">
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
                         checked={formValues.activo}
-                        onChange={(e) => setFormValues({...formValues, activo: e.target.checked})}
+                        onChange={(e) => setFormValues({ ...formValues, activo: e.target.checked })}
                       />
                       <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                       <span className="ml-3 text-sm font-medium text-slate-700">
@@ -396,14 +395,14 @@ export default function AdminEmployees() {
                         <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Sin Rostro</span>
                       )}
                     </div>
-                    
+
                     {/* Contenedor de la foto de perfil */}
                     {(formValues.fotoBase64 || formValues.fotoPerfilUrl) ? (
                       <div className="flex justify-center mb-4">
                         <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md">
-                          <img 
-                            src={formValues.fotoBase64 || `http://localhost:5000${formValues.fotoPerfilUrl}`} 
-                            alt="Foto de Perfil" 
+                          <img
+                            src={formValues.fotoBase64 || `http://localhost:5000${formValues.fotoPerfilUrl}`}
+                            alt="Foto de Perfil"
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -413,12 +412,12 @@ export default function AdminEmployees() {
                         <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 shadow-md bg-slate-200 flex items-center justify-center">
                           <Users className="w-12 h-12 text-slate-400" />
                         </div>
-                        <span className="text-xs text-amber-600 mt-2 text-center">Foto antigua no disponible.<br/>Actualiza el rostro para guardarla.</span>
+                        <span className="text-xs text-amber-600 mt-2 text-center">Foto antigua no disponible.<br />Actualiza el rostro para guardarla.</span>
                       </div>
                     ) : null}
 
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setIsScanningFace(true)}
                       className="w-full py-2.5 mt-2 border-2 border-dashed border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
                     >
@@ -429,15 +428,15 @@ export default function AdminEmployees() {
               </div>
 
               <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end space-x-3">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={handleCloseModal}
                   className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 font-medium transition-colors"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   form="employeeForm"
                   className="px-4 py-2 text-white bg-slate-800 rounded-lg hover:bg-slate-700 font-medium shadow-sm transition-colors"
                 >
@@ -453,16 +452,16 @@ export default function AdminEmployees() {
       <AnimatePresence>
         {isScanningFace && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden ring-1 ring-white/10"
             >
-              <FaceScanner 
+              <FaceScanner
                 onScanSuccess={(descriptor, imageBase64) => {
                   setFormValues({
-                    ...formValues, 
+                    ...formValues,
                     rostroDescriptor: descriptor,
                     fotoBase64: imageBase64
                   });

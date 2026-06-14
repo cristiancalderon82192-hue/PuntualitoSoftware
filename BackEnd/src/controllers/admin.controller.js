@@ -38,15 +38,15 @@ const getDashboardStats = async (req, res) => {
     });
 
     const enAlmuerzo = await prisma.asistencia.count({
-      where: { 
-        fecha: hoy, 
-        horaSalidaAlmuerzo: { not: null }, 
-        horaEntradaAlmuerzo: null, 
+      where: {
+        fecha: hoy,
+        horaSalidaAlmuerzo: { not: null },
+        horaEntradaAlmuerzo: null,
         horaSalida: null,
         usuario: { rol: { nombre: 'EMPLEADO' } }
       }
     });
-    
+
     // 4. Ausentes (Usuarios activos sin registro hoy o con registro AUSENTE)
     const listaAusentes = await prisma.usuario.findMany({
       where: {
@@ -75,8 +75,8 @@ const getDashboardStats = async (req, res) => {
 
     // 5. Registros Recientes (Paginados con take: 10, excluyendo ausencias automáticas/manuales)
     const registrosRecientes = await prisma.asistencia.findMany({
-      where: { 
-        fecha: hoy, 
+      where: {
+        fecha: hoy,
         usuario: { rol: { nombre: 'EMPLEADO' } },
         estado: { nombre: { not: 'AUSENTE' } }
       },
@@ -113,7 +113,7 @@ const getDashboardStats = async (req, res) => {
 const getAttendances = async (req, res) => {
   try {
     const { fechaInicio, fechaFin, usuarioId, sedeId } = req.query;
-    
+
     let whereClause = {};
 
     if (fechaInicio && fechaFin) {
@@ -140,7 +140,7 @@ const getAttendances = async (req, res) => {
       },
       orderBy: { fecha: 'desc' }
     });
-    
+
     res.json(asistencias);
   } catch (error) {
     console.error('Error en getAttendances:', error);
@@ -182,15 +182,15 @@ const getUsers = async (req, res) => {
 const createUser = async (req, res) => {
   try {
     const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64 } = req.body;
-    
+
     const hashedPassword = await bcrypt.hash(contrasena, 10);
-    
+
     let fotoPerfilUrl = null;
     if (fotoBase64) {
       const base64Data = fotoBase64.replace(/^data:image\/\w+;base64,/, "");
       const filename = `perfil_${documento}_${Date.now()}.jpg`;
       const uploadPath = path.join(__dirname, '../../public/uploads/perfiles', filename);
-      
+
       const dir = path.dirname(uploadPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -217,7 +217,7 @@ const createUser = async (req, res) => {
         fotoPerfilUrl
       }
     });
-    
+
     res.status(201).json(nuevoUsuario);
   } catch (error) {
     console.error('Error en createUser:', error);
@@ -232,7 +232,7 @@ const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64 } = req.body;
-    
+
     let dataToUpdate = {
       documento,
       nombre,
@@ -253,7 +253,7 @@ const updateUser = async (req, res) => {
       const base64Data = fotoBase64.replace(/^data:image\/\w+;base64,/, "");
       const filename = `perfil_${documento}_${Date.now()}.jpg`;
       const uploadPath = path.join(__dirname, '../../public/uploads/perfiles', filename);
-      
+
       const dir = path.dirname(uploadPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -275,7 +275,7 @@ const updateUser = async (req, res) => {
       where: { id: Number(id) },
       data: dataToUpdate
     });
-    
+
     res.json(usuarioActualizado);
   } catch (error) {
     console.error('Error en updateUser:', error);
@@ -289,7 +289,7 @@ const updateUser = async (req, res) => {
 const toggleUserStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const usuario = await prisma.usuario.findUnique({ where: { id: Number(id) } });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -297,7 +297,7 @@ const toggleUserStatus = async (req, res) => {
       where: { id: Number(id) },
       data: { activo: !usuario.activo }
     });
-    
+
     res.json(usuarioActualizado);
   } catch (error) {
     console.error('Error en toggleUserStatus:', error);
@@ -310,7 +310,7 @@ const getFormData = async (req, res) => {
     const roles = await prisma.rol.findMany();
     const sedes = await prisma.sede.findMany({ where: { activo: true } });
     const horarios = await prisma.horario.findMany({ where: { activo: true } });
-    
+
     res.json({ roles, sedes, horarios });
   } catch (error) {
     console.error('Error en getFormData:', error);
@@ -322,7 +322,7 @@ const approveExtras = async (req, res) => {
   try {
     const { id } = req.params;
     const { minutosAprobados } = req.body;
-    
+
     if (minutosAprobados === undefined) {
       return res.status(400).json({ error: 'Faltan los minutos aprobados' });
     }
@@ -331,7 +331,7 @@ const approveExtras = async (req, res) => {
       where: { id: Number(id) },
       data: { minutosExtraAprobados: Number(minutosAprobados) }
     });
-    
+
     res.json({ mensaje: 'Horas extras aprobadas correctamente', asistencia: asistenciaActualizada });
   } catch (error) {
     console.error('Error en approveExtras:', error);
