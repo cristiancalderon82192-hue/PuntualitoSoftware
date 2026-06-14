@@ -92,22 +92,26 @@ const loginEmpleado = async (req, res) => {
     }
 
     if (!usuario.rostroDescriptor) {
-      return res.status(400).json({ error: 'El empleado no tiene un rostro registrado' });
-    }
+      // Es la primera vez que inicia sesión, registrar el rostro automáticamente
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { rostroDescriptor }
+      });
+    } else {
+      // Calcular distancia Euclidiana
+      const storedDescriptor = JSON.parse(usuario.rostroDescriptor);
+      const incomingDescriptor = JSON.parse(rostroDescriptor);
 
-    // Calcular distancia Euclidiana
-    const storedDescriptor = JSON.parse(usuario.rostroDescriptor);
-    const incomingDescriptor = JSON.parse(rostroDescriptor);
+      let distance = 0;
+      for (let i = 0; i < storedDescriptor.length; i++) {
+        distance += Math.pow(storedDescriptor[i] - incomingDescriptor[i], 2);
+      }
+      distance = Math.sqrt(distance);
 
-    let distance = 0;
-    for (let i = 0; i < storedDescriptor.length; i++) {
-      distance += Math.pow(storedDescriptor[i] - incomingDescriptor[i], 2);
-    }
-    distance = Math.sqrt(distance);
-
-    // Umbral estandar de face-api para reconocimiento es 0.6
-    if (distance > 0.6) {
-      return res.status(401).json({ error: 'El rostro no coincide con el registrado' });
+      // Umbral estandar de face-api para reconocimiento es 0.6
+      if (distance > 0.6) {
+        return res.status(401).json({ error: 'El rostro no coincide con el registrado' });
+      }
     }
 
     const payload = {

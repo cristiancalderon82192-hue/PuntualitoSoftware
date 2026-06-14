@@ -141,7 +141,10 @@ export default function Dashboard() {
 
   const handleSubmitJustification = async (e) => {
     e.preventDefault();
-    if (!observaciones && !evidencia) {
+    if (justifyType === 'ALMUERZO' && !observaciones) {
+      alert('Debes incluir un motivo o novedad de tu tardanza');
+      return;
+    } else if (justifyType !== 'ALMUERZO' && !observaciones && !evidencia) {
       alert('Debes incluir un comentario o subir una foto');
       return;
     }
@@ -388,31 +391,33 @@ export default function Dashboard() {
                     ></textarea>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Evidencia Fotográfica</label>
-                    <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center hover:bg-slate-50 transition-colors">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        capture="environment"
-                        onChange={e => setEvidencia(e.target.files[0])}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      {evidencia ? (
-                        <div className="text-center">
-                          <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                          <p className="text-sm font-medium text-slate-700 truncate max-w-[200px]">{evidencia.name}</p>
-                          <p className="text-xs text-emerald-600 mt-1">¡Foto cargada!</p>
-                        </div>
-                      ) : (
-                        <div className="text-center text-slate-500">
-                          <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm font-medium">Toca para tomar una foto</p>
-                          <p className="text-xs mt-1">o sube desde la galería</p>
-                        </div>
-                      )}
+                  {justifyType !== 'ALMUERZO' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Evidencia Fotográfica</label>
+                      <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center hover:bg-slate-50 transition-colors">
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          capture="environment"
+                          onChange={e => setEvidencia(e.target.files[0])}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        {evidencia ? (
+                          <div className="text-center">
+                            <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                            <p className="text-sm font-medium text-slate-700 truncate max-w-[200px]">{evidencia.name}</p>
+                            <p className="text-xs text-emerald-600 mt-1">¡Foto cargada!</p>
+                          </div>
+                        ) : (
+                          <div className="text-center text-slate-500">
+                            <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm font-medium">Toca para tomar una foto</p>
+                            <p className="text-xs mt-1">o sube desde la galería</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </form>
               </div>
 
@@ -420,7 +425,7 @@ export default function Dashboard() {
                 <button 
                   type="submit"
                   form="justify-form"
-                  disabled={isSubmittingJustification || (!observaciones && !evidencia)}
+                  disabled={isSubmittingJustification || (justifyType === 'ALMUERZO' ? !observaciones : (!observaciones && !evidencia))}
                   className="flex-1 bg-amber-500 text-white font-medium py-2.5 rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {isSubmittingJustification ? (
