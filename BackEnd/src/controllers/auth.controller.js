@@ -62,10 +62,87 @@ const login = async (req, res) => {
   }
 };
 
+// Controlador para el Login de Empleado (Reconocimiento Facial)
+const loginEmpleado = async (req, res) => {
+  try {
+    const { documento, rostroDescriptor } = req.body;
+
+    if (!documento || !rostroDescriptor) {
+      return res.status(400).json({ error: 'Documento y rostro son requeridos' });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { documento },
+      include: {
+        rol: true,
+        sede: true,
+      }
+    });
+
+    if (!usuario) {
+      return res.status(401).json({ error: 'Empleado no encontrado' });
+    }
+
+    if (!usuario.activo) {
+      return res.status(403).json({ error: 'El usuario está desactivado' });
+    }
+
+    if (usuario.rol.nombre !== 'EMPLEADO') {
+      return res.status(403).json({ error: 'Este acceso es exclusivo para empleados' });
+    }
+
+    if (!usuario.rostroDescriptor) {
+      return res.status(400).json({ error: 'El empleado no tiene un rostro registrado' });
+    }
+
+    // Calcular distancia Euclidiana
+    const storedDescriptor = JSON.parse(usuario.rostroDescriptor);
+    const incomingDescriptor = JSON.parse(rostroDescriptor);
+
+    let distance = 0;
+    for (let i = 0; i < storedDescriptor.length; i++) {
+      distance += Math.pow(storedDescriptor[i] - incomingDescriptor[i], 2);
+    }
+    distance = Math.sqrt(distance);
+
+    // Umbral estandar de face-api para reconocimiento es 0.6
+    if (distance > 0.6) {
+      return res.status(401).json({ error: 'El rostro no coincide con el registrado' });
+    }
+
+    const payload = {
+      id: usuario.id,
+      rol: usuario.rol.nombre,
+      sedeId: usuario.sedeId,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: '8h'
+    });
+
+    res.json({
+      mensaje: 'Login facial exitoso',
+      token,
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        correo: usuario.correo,
+        rol: usuario.rol.nombre,
+        sede: usuario.sede.nombre
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en loginEmpleado:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 // Controlador para Registrar Usuarios (Normalmente solo el ADMIN puede hacer esto)
 const register = async (req, res) => {
   try {
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId } = req.body;
+    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, rostroDescriptor } = req.body;
 
     // 1. Verificar si el correo o documento ya existen
     const usuarioExistente = await prisma.usuario.findFirst({
@@ -95,7 +172,8 @@ const register = async (req, res) => {
         contrasena: contrasenaEncriptada,
         rolId,
         sedeId,
-        horarioId
+        horarioId,
+        rostroDescriptor
       },
       // Devolvemos la info del usuario sin la contraseña para seguridad
       select: {
@@ -119,5 +197,6 @@ const register = async (req, res) => {
 
 module.exports = {
   login,
+  loginEmpleado,
   register
 };

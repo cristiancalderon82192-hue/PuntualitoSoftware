@@ -1,16 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { LogIn, Mail, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LogIn, Mail, Lock, CheckCircle, AlertCircle, User, Camera } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import Globe from 'react-globe.gl';
+import FaceScanner from '../components/FaceScanner';
 
 export default function Login() {
+  const [loginMode, setLoginMode] = useState('EMPLEADO'); // 'EMPLEADO' o 'ADMIN'
+  const [documento, setDocumento] = useState('');
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isScanningFace, setIsScanningFace] = useState(false);
   
   const globeEl = useRef();
   
@@ -43,7 +47,7 @@ export default function Login() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleLoginAdmin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -58,6 +62,39 @@ export default function Login() {
       
     } catch (err) {
       setError(err.response?.data?.error || 'Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEmployeeLogin = (e) => {
+    e.preventDefault();
+    if (!documento) {
+      setError('Por favor ingresa tu documento');
+      return;
+    }
+    setError('');
+    setIsScanningFace(true);
+  };
+
+  const handleFaceScanSuccess = async (descriptor) => {
+    setIsScanningFace(false);
+    setLoading(true);
+    setError('');
+    
+    try {
+      const response = await api.post('/auth/login-empleado', { 
+        documento, 
+        rostroDescriptor: descriptor 
+      });
+      setAuth(response.data.usuario, response.data.token);
+      
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 500);
+      
+    } catch (err) {
+      setError(err.response?.data?.error || 'Rostro no reconocido. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -191,73 +228,131 @@ export default function Login() {
                 <p className="text-sm font-medium text-purple-400 tracking-wide uppercase mt-1">Portal de Acceso</p>
               </div>
             </div>
-            <h2 className="text-2xl font-semibold text-slate-100">Bienvenido de nuevo</h2>
-            <p className="text-slate-400 mt-2 text-sm">Ingresa tus credenciales corporativas para continuar.</p>
+            <h2 className="text-2xl font-semibold text-slate-100">Bienvenido a Puntualito</h2>
+            <p className="text-slate-400 mt-2 text-sm">Selecciona tu método de acceso para continuar.</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Correo Corporativo</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  className="block w-full pl-11 pr-4 py-3.5 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-slate-800/50 text-white placeholder-slate-500 transition-all outline-none backdrop-blur-sm"
-                  placeholder="tu@empresa.com"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
-                </div>
-                <input
-                  type="password"
-                  required
-                  className="block w-full pl-11 pr-4 py-3.5 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-slate-800/50 text-white placeholder-slate-500 transition-all outline-none backdrop-blur-sm"
-                  placeholder="••••••••"
-                  value={contrasena}
-                  onChange={(e) => setContrasena(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="flex items-center space-x-2 text-red-400 bg-red-900/30 border border-red-900/50 p-3.5 rounded-xl text-sm"
-              >
-                <AlertCircle className="w-5 h-5 shrink-0" />
-                <span>{error}</span>
-              </motion.div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-purple-900/20 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden"
+          <div className="flex bg-slate-800/50 p-1 rounded-xl mb-6">
+            <button 
+              onClick={() => { setLoginMode('EMPLEADO'); setError(''); setIsScanningFace(false); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${loginMode === 'EMPLEADO' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
             >
-              <span className="relative flex items-center space-x-2">
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <span>Iniciar Sesión Segura</span>
-                    <CheckCircle className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0 translate-x-2 group-hover:translate-x-0" />
-                  </>
-                )}
-              </span>
+              Soy Empleado
             </button>
-          </form>
+            <button 
+              onClick={() => { setLoginMode('ADMIN'); setError(''); setIsScanningFace(false); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${loginMode === 'ADMIN' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Soy Administrador
+            </button>
+          </div>
+
+          {loginMode === 'ADMIN' && (
+            <form onSubmit={handleLoginAdmin} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Correo Corporativo</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    className="block w-full pl-11 pr-4 py-3.5 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-slate-800/50 text-white placeholder-slate-500 transition-all outline-none backdrop-blur-sm"
+                    placeholder="admin@empresa.com"
+                    value={correo}
+                    onChange={(e) => setCorreo(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    className="block w-full pl-11 pr-4 py-3.5 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-slate-800/50 text-white placeholder-slate-500 transition-all outline-none backdrop-blur-sm"
+                    placeholder="••••••••"
+                    value={contrasena}
+                    onChange={(e) => setContrasena(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="flex items-center space-x-2 text-red-400 bg-red-900/30 border border-red-900/50 p-3.5 rounded-xl text-sm"
+                >
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{error}</span>
+                </motion.div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-purple-900/20 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden"
+              >
+                <span className="relative flex items-center space-x-2">
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span>Iniciar Sesión Administrativa</span>
+                      <CheckCircle className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0 translate-x-2 group-hover:translate-x-0" />
+                    </>
+                  )}
+                </span>
+              </button>
+            </form>
+          )}
+
+          {loginMode === 'EMPLEADO' && (
+            <div className="space-y-6">
+              <form onSubmit={startEmployeeLogin} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Número de Documento (DNI/Cédula)</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      className="block w-full pl-11 pr-4 py-3.5 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-slate-800/50 text-white placeholder-slate-500 transition-all outline-none backdrop-blur-sm"
+                      placeholder="Ej: 12345678"
+                      value={documento}
+                      onChange={(e) => setDocumento(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {error && !isScanningFace && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="flex items-center space-x-2 text-red-400 bg-red-900/30 border border-red-900/50 p-3.5 rounded-xl text-sm"
+                  >
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <span>{error}</span>
+                  </motion.div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-purple-900/20 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all"
+                >
+                  <Camera className="w-5 h-5 mr-2" /> Continuar con Rostro
+                </button>
+              </form>
+            </div>
+          )}
           
           <div className="mt-8 text-center">
             <p className="text-xs text-slate-500">
@@ -266,6 +361,40 @@ export default function Login() {
           </div>
         </motion.div>
       </div>
+      {/* Modal de Escáner Facial */}
+      <AnimatePresence>
+        {isScanningFace && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden ring-1 ring-white/10"
+            >
+              {loading && (
+                <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center z-[200] backdrop-blur-sm">
+                  <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-purple-400 font-bold text-lg animate-pulse">Verificando identidad...</p>
+                </div>
+              )}
+              
+              <FaceScanner 
+                onScanSuccess={handleFaceScanSuccess}
+                onCancel={() => setIsScanningFace(false)}
+                autoScan={true}
+              />
+              
+              {error && !loading && (
+                <div className="m-4 flex items-center space-x-2 text-red-400 bg-red-900/30 border border-red-900/50 p-3.5 rounded-xl text-sm">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

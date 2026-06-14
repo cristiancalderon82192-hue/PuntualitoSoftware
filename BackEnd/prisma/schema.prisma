@@ -80,6 +80,7 @@ model Usuario {
   
   horaInicioAlmuerzo String?  // Formato "12:00:00" (Opcional)
   horaFinAlmuerzo    String?  // Formato "13:00:00" (Opcional)
+  rostroDescriptor   String?  @db.Text // Descriptor facial guardado como JSON string
 
   // Relaciones (Claves Foráneas)
   rolId         Int

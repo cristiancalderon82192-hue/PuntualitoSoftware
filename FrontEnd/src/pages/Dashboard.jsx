@@ -61,6 +61,14 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Efecto para registrar automáticamente la llegada (auto check-in)
+  useEffect(() => {
+    if (attendanceStatus === 'PENDIENTE_ENTRADA' && !isSubmitting && !currentAction) {
+      handleCheckIn('ENTRADA');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attendanceStatus]);
+
   // Estados para justificación
   const [showJustifyModal, setShowJustifyModal] = useState(false);
   const [justifyType, setJustifyType] = useState('ENTRADA');
@@ -227,14 +235,10 @@ export default function Dashboard() {
           ) : (
             <div className="flex flex-col gap-4">
               {attendanceStatus === 'PENDIENTE_ENTRADA' && (
-                <button
-                  onClick={() => handleCheckIn('ENTRADA')}
-                  disabled={geoLoading || isSubmitting || successMsg}
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-70"
-                >
-                  <MapPin className="w-6 h-6" />
-                  <span>Registrar Llegada</span>
-                </button>
+                <div className="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-lg border border-slate-200">
+                  <div className="w-5 h-5 border-2 border-slate-400 border-t-purple-600 rounded-full animate-spin"></div>
+                  <span>Registrando tu llegada automáticamente...</span>
+                </div>
               )}
 
               {attendanceStatus === 'TRABAJANDO' && (

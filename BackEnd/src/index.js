@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const authRoutes = require('./routes/auth.routes');
-const { startCronJobs } = require('./services/cron.service');
+const { startCronJobs, checkPastAbsences } = require('./services/cron.service');
 
 // Middlewares
 app.use(cors());
@@ -29,6 +29,8 @@ app.use('/api/admin/settings', require('./routes/settings.routes'));
 
 // Inicializar tareas programadas (Cron Jobs)
 startCronJobs();
+// Verificar inasistencias de los últimos 30 días si el servidor se reinicia
+checkPastAbsences(30);
 
 // Start server
 app.listen(PORT, () => {

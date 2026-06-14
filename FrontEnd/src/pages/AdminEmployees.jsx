@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Plus, Edit2, Trash2, X, Check, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check, Search, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import FaceScanner from '../components/FaceScanner';
 
 export default function AdminEmployees() {
   const [employees, setEmployees] = useState([]);
@@ -12,6 +13,7 @@ export default function AdminEmployees() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [isScanningFace, setIsScanningFace] = useState(false);
   
   // Form State
   const [formValues, setFormValues] = useState({
@@ -25,7 +27,8 @@ export default function AdminEmployees() {
     horarioId: '',
     horaInicioAlmuerzo: '',
     horaFinAlmuerzo: '',
-    activo: true
+    activo: true,
+    rostroDescriptor: ''
   });
   const [formError, setFormError] = useState('');
 
@@ -63,7 +66,8 @@ export default function AdminEmployees() {
         horarioId: employee.horarioId,
         horaInicioAlmuerzo: employee.horaInicioAlmuerzo || '',
         horaFinAlmuerzo: employee.horaFinAlmuerzo || '',
-        activo: employee.activo
+        activo: employee.activo,
+        rostroDescriptor: employee.rostroDescriptor || ''
       });
     } else {
       setEditingEmployee(null);
@@ -78,7 +82,8 @@ export default function AdminEmployees() {
         horarioId: formData.horarios[0]?.id || '',
         horaInicioAlmuerzo: '',
         horaFinAlmuerzo: '',
-        activo: true
+        activo: true,
+        rostroDescriptor: ''
       });
     }
     setIsModalOpen(true);
@@ -376,6 +381,40 @@ export default function AdminEmployees() {
                         {formValues.activo ? 'Usuario Activo en el Sistema' : 'Usuario Inactivo (Suspendido)'}
                       </span>
                     </label>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-medium text-slate-800 flex items-center">
+                        <Camera className="w-4 h-4 mr-2 text-purple-600" />
+                        Reconocimiento Facial
+                      </h4>
+                      {formValues.rostroDescriptor ? (
+                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">Rostro Registrado</span>
+                      ) : (
+                        <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Sin Rostro</span>
+                      )}
+                    </div>
+                    
+                    {!isScanningFace ? (
+                      <button 
+                        type="button" 
+                        onClick={() => setIsScanningFace(true)}
+                        className="w-full py-2.5 mt-2 border-2 border-dashed border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium"
+                      >
+                        {formValues.rostroDescriptor ? 'Actualizar Rostro' : 'Capturar Rostro para Login'}
+                      </button>
+                    ) : (
+                      <div className="mt-4">
+                        <FaceScanner 
+                          onScanSuccess={(descriptor) => {
+                            setFormValues({...formValues, rostroDescriptor: descriptor});
+                            setIsScanningFace(false);
+                          }}
+                          onCancel={() => setIsScanningFace(false)}
+                        />
+                      </div>
+                    )}
                   </div>
                 </form>
               </div>

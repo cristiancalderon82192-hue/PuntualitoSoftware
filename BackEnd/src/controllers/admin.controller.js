@@ -179,7 +179,7 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo } = req.body;
+    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor } = req.body;
     
     const hashedPassword = await bcrypt.hash(contrasena, 10);
     
@@ -195,7 +195,8 @@ const createUser = async (req, res) => {
         horarioId: Number(horarioId),
         horaInicioAlmuerzo: horaInicioAlmuerzo || null,
         horaFinAlmuerzo: horaFinAlmuerzo || null,
-        activo: activo !== undefined ? activo : true
+        activo: activo !== undefined ? activo : true,
+        rostroDescriptor
       }
     });
     
@@ -212,7 +213,7 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo } = req.body;
+    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor } = req.body;
     
     let dataToUpdate = {
       documento,
@@ -225,6 +226,10 @@ const updateUser = async (req, res) => {
       horaInicioAlmuerzo: horaInicioAlmuerzo || null,
       horaFinAlmuerzo: horaFinAlmuerzo || null,
     };
+
+    if (rostroDescriptor) {
+      dataToUpdate.rostroDescriptor = rostroDescriptor;
+    }
 
     if (activo !== undefined) {
       dataToUpdate.activo = activo;
