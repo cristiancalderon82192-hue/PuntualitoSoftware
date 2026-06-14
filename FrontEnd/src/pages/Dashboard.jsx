@@ -136,7 +136,7 @@ export default function Dashboard() {
       }
     } catch (err) {
       setApiError(err.response?.data?.error || 'Error al conectar con el servidor');
-      setLocation(null);
+      // setLocation(null); // No limpiar la ubicación para que el mapa siga visible
     } finally {
       setIsSubmitting(false);
     }
@@ -244,10 +244,20 @@ export default function Dashboard() {
           ) : (
             <div className="flex flex-col gap-4">
               {attendanceStatus === 'PENDIENTE_ENTRADA' && (
-                <div className="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-lg border border-slate-200">
-                  <div className="w-5 h-5 border-2 border-slate-400 border-t-purple-600 rounded-full animate-spin"></div>
-                  <span>Registrando tu llegada automáticamente...</span>
-                </div>
+                apiError ? (
+                  <button 
+                    onClick={() => handleCheckIn('ENTRADA')}
+                    disabled={isSubmitting || geoLoading}
+                    className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg transition-all"
+                  >
+                    <span>Reintentar Registro de Llegada</span>
+                  </button>
+                ) : (
+                  <div className="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-lg border border-slate-200">
+                    <div className="w-5 h-5 border-2 border-slate-400 border-t-purple-600 rounded-full animate-spin"></div>
+                    <span>Registrando tu llegada automáticamente...</span>
+                  </div>
+                )
               )}
 
               {attendanceStatus === 'TRABAJANDO' && (
