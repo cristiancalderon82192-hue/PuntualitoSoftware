@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [currentAction, setCurrentAction] = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(dayjs());
+  const [causasTardanza, setCausasTardanza] = useState([]);
 
   const loadStatus = async () => {
     try {
@@ -34,6 +35,7 @@ export default function Dashboard() {
       setYaAlmorzo(res.data.yaAlmorzo);
       setSedeInfo(res.data.sede);
       setTimeLimits(res.data.timeLimits);
+      if (res.data.causasTardanza) setCausasTardanza(res.data.causasTardanza);
       
       if (res.data.requireJustification && res.data.asistencia) {
         setAsistenciaId(res.data.asistencia.id);
@@ -73,6 +75,7 @@ export default function Dashboard() {
   const [showJustifyModal, setShowJustifyModal] = useState(false);
   const [justifyType, setJustifyType] = useState('ENTRADA');
   const [asistenciaId, setAsistenciaId] = useState(null);
+  const [causaSeleccionada, setCausaSeleccionada] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [evidencia, setEvidencia] = useState(null);
   const [isSubmittingJustification, setIsSubmittingJustification] = useState(false);
@@ -141,19 +144,22 @@ export default function Dashboard() {
 
   const handleSubmitJustification = async (e) => {
     e.preventDefault();
-    if (justifyType === 'ALMUERZO' && !observaciones) {
-      alert('Debes incluir un motivo o novedad de tu tardanza');
-      return;
-    } else if (justifyType !== 'ALMUERZO' && !observaciones && !evidencia) {
-      alert('Debes incluir un comentario o subir una foto');
+    if (!causaSeleccionada) {
+      alert('Debes seleccionar una causa de tardanza');
       return;
     }
+    if (causaSeleccionada === 'OTRO' && !observaciones.trim()) {
+      alert('Por favor especifica el motivo en las observaciones');
+      return;
+    }
+
+    const textoFinal = causaSeleccionada === 'OTRO' ? observaciones : (observaciones ? `${causaSeleccionada}: ${observaciones}` : causaSeleccionada);
 
     setIsSubmittingJustification(true);
     try {
       const formData = new FormData();
-      if (observaciones) formData.append('observaciones', observaciones);
-      if (evidencia) formData.append('evidencia', evidencia);
+      formData.append('observaciones', textoFinal);
+      if (evidencia && justifyType !== 'ALMUERZO') formData.append('evidencia', evidencia);
       formData.append('tipo', justifyType);
 
       await api.patch(`/attendance/${asistenciaId}/justify`, formData, {
@@ -382,12 +388,27 @@ export default function Dashboard() {
               <div className="p-6 overflow-y-auto">
                 <form id="justify-form" onSubmit={handleSubmitJustification} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Motivo / Observación</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Causa de Tardanza</label>
+                    <select 
+                      value={causaSeleccionada}
+                      onChange={e => setCausaSeleccionada(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none text-sm bg-white"
+                    >
+                      <option value="">Selecciona una causa...</option>
+                      {causasTardanza.map(c => (
+                        <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                      ))}
+                      <option value="OTRO">Otra (Especifique)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones Adicionales {causaSeleccionada === 'OTRO' && <span className="text-red-500">*</span>}</label>
                     <textarea 
                       value={observaciones}
                       onChange={e => setObservaciones(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none resize-none h-24 text-sm"
-                      placeholder="Ej. Tráfico pesado en la avenida principal..."
+                      className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none resize-none h-20 text-sm"
+                      placeholder="Detalles opcionales..."
                     ></textarea>
                   </div>
                   
@@ -425,7 +446,7 @@ export default function Dashboard() {
                 <button 
                   type="submit"
                   form="justify-form"
-                  disabled={isSubmittingJustification || (justifyType === 'ALMUERZO' ? !observaciones : (!observaciones && !evidencia))}
+                  disabled={isSubmittingJustification || !causaSeleccionada || (causaSeleccionada === 'OTRO' && !observaciones.trim())}
                   className="flex-1 bg-amber-500 text-white font-medium py-2.5 rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {isSubmittingJustification ? (

@@ -157,6 +157,76 @@ const toggleHorarioStatus = async (req, res) => {
   }
 };
 
+// ==========================================
+// CRUD CAUSAS TARDANZA
+// ==========================================
+
+const getCausas = async (req, res) => {
+  try {
+    const causas = await prisma.causaTardanza.findMany({
+      orderBy: { creadoEn: 'desc' }
+    });
+    res.json(causas);
+  } catch (error) {
+    console.error('Error en getCausas:', error);
+    res.status(500).json({ error: 'Error al obtener causas de tardanza' });
+  }
+};
+
+const createCausa = async (req, res) => {
+  try {
+    const { nombre } = req.body;
+    
+    const nuevaCausa = await prisma.causaTardanza.create({
+      data: {
+        nombre,
+        activo: true
+      }
+    });
+    
+    res.status(201).json(nuevaCausa);
+  } catch (error) {
+    console.error('Error en createCausa:', error);
+    res.status(500).json({ error: 'Error al crear causa de tardanza' });
+  }
+};
+
+const updateCausa = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre } = req.body;
+
+    const causaActualizada = await prisma.causaTardanza.update({
+      where: { id: Number(id) },
+      data: { nombre }
+    });
+
+    res.json(causaActualizada);
+  } catch (error) {
+    console.error('Error en updateCausa:', error);
+    res.status(500).json({ error: 'Error al actualizar causa de tardanza' });
+  }
+};
+
+const toggleCausaStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const causa = await prisma.causaTardanza.findUnique({ where: { id: Number(id) } });
+    if (!causa) return res.status(404).json({ error: 'Causa no encontrada' });
+
+    const causaActualizada = await prisma.causaTardanza.update({
+      where: { id: Number(id) },
+      data: { activo: !causa.activo }
+    });
+    
+    res.json(causaActualizada);
+  } catch (error) {
+    console.error('Error en toggleCausaStatus:', error);
+    res.status(500).json({ error: 'Error al cambiar estado de la causa' });
+  }
+};
+
 module.exports = {
   getSedes,
   createSede,
@@ -165,5 +235,9 @@ module.exports = {
   getHorarios,
   createHorario,
   updateHorario,
-  toggleHorarioStatus
+  toggleHorarioStatus,
+  getCausas,
+  createCausa,
+  updateCausa,
+  toggleCausaStatus
 };

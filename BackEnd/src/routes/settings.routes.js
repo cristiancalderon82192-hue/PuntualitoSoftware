@@ -7,7 +7,11 @@ const {
   getHorarios,
   createHorario,
   updateHorario,
-  toggleHorarioStatus
+  toggleHorarioStatus,
+  getCausas,
+  createCausa,
+  updateCausa,
+  toggleCausaStatus
 } = require('../controllers/settings.controller');
 const { verifyToken, isAdmin } = require('../middlewares/auth.middleware');
 
@@ -31,5 +35,13 @@ router.get('/horarios', getHorarios);
 router.post('/horarios', createHorario);
 router.put('/horarios/:id', updateHorario);
 router.patch('/horarios/:id/status', toggleHorarioStatus);
+
+// =======================
+// RUTAS PARA CAUSAS
+// =======================
+router.get('/causas', getCausas);
+router.post('/causas', createCausa);
+router.put('/causas/:id', updateCausa);
+router.patch('/causas/:id/status', toggleCausaStatus);
 
 module.exports = router;

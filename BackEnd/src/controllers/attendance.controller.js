@@ -28,6 +28,11 @@ const getAttendanceStatus = async (req, res) => {
       include: { horario: true, sede: true }
     });
 
+    const causasTardanza = await prisma.causaTardanza.findMany({
+      where: { activo: true },
+      orderBy: { nombre: 'asc' }
+    });
+
     const tieneAlmuerzo = !!usuario?.horaInicioAlmuerzo;
     const infoSede = usuario?.sede ? { 
       latitud: usuario.sede.latitud, 
@@ -42,11 +47,11 @@ const getAttendanceStatus = async (req, res) => {
     };
 
     if (!asistencia) {
-      return res.json({ status: 'PENDIENTE_ENTRADA', asistencia: null, tieneAlmuerzo, sede: infoSede, timeLimits });
+      return res.json({ status: 'PENDIENTE_ENTRADA', asistencia: null, tieneAlmuerzo, sede: infoSede, timeLimits, causasTardanza });
     }
 
     if (asistencia.estado?.nombre === 'AUSENTE') {
-      return res.json({ status: 'AUSENTE', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits });
+      return res.json({ status: 'AUSENTE', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, causasTardanza });
     }
 
     const requireJustification = asistencia?.estado?.nombre === 'TARDE' && !asistencia.observaciones && !asistencia.evidenciaUrl;
@@ -64,14 +69,14 @@ const getAttendanceStatus = async (req, res) => {
     }
 
     if (asistencia.horaSalida) {
-      return res.json({ status: 'JORNADA_FINALIZADA', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo });
+      return res.json({ status: 'JORNADA_FINALIZADA', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo, causasTardanza });
     }
 
     if (asistencia.horaSalidaAlmuerzo && !asistencia.horaEntradaAlmuerzo) {
-      return res.json({ status: 'EN_ALMUERZO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo });
+      return res.json({ status: 'EN_ALMUERZO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo, causasTardanza });
     }
 
-    return res.json({ status: 'TRABAJANDO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo });
+    return res.json({ status: 'TRABAJANDO', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo, causasTardanza });
 
   } catch (error) {
     console.error('Error en getAttendanceStatus:', error);

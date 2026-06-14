@@ -63,6 +63,15 @@ model Horario {
   @@map("horarios")
 }
 
+model CausaTardanza {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  @@map("causas_tardanza")
+}
+
 // ---------------------------------------------------------
 // Entidades de Negocio
 // ---------------------------------------------------------
