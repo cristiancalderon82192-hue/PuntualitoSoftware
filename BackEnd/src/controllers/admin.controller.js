@@ -181,41 +181,27 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64 } = req.body;
+    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor } = req.body;
 
     const hashedPassword = await bcrypt.hash(contrasena, 10);
 
-    let fotoPerfilUrl = null;
-    if (fotoBase64) {
-      const base64Data = fotoBase64.replace(/^data:image\/\w+;base64,/, "");
-      const filename = `perfil_${documento}_${Date.now()}.jpg`;
-      const uploadPath = path.join(__dirname, '../../public/uploads/perfiles', filename);
-
-      const dir = path.dirname(uploadPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      fs.writeFileSync(uploadPath, base64Data, 'base64');
-      fotoPerfilUrl = `/uploads/perfiles/${filename}`;
-    }
+    const dataToCreate = {
+      documento,
+      nombre,
+      apellido,
+      correo,
+      contrasena: hashedPassword,
+      rolId: Number(rolId),
+      sedeId: Number(sedeId),
+      horarioId: Number(horarioId),
+      horaInicioAlmuerzo: horaInicioAlmuerzo || null,
+      horaFinAlmuerzo: horaFinAlmuerzo || null,
+      activo: Boolean(activo),
+      rostroDescriptor: rostroDescriptor || null
+    };
 
     const nuevoUsuario = await prisma.usuario.create({
-      data: {
-        documento,
-        nombre,
-        apellido,
-        correo,
-        contrasena: hashedPassword,
-        rolId: Number(rolId),
-        sedeId: Number(sedeId),
-        horarioId: Number(horarioId),
-        horaInicioAlmuerzo: horaInicioAlmuerzo || null,
-        horaFinAlmuerzo: horaFinAlmuerzo || null,
-        activo: activo !== undefined ? activo : true,
-        rostroDescriptor,
-        fotoPerfilUrl
-      }
+      data: dataToCreate
     });
 
     res.status(201).json(nuevoUsuario);

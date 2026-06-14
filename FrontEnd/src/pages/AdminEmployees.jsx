@@ -438,11 +438,10 @@ export default function AdminEmployees() {
               className="bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden ring-1 ring-white/10"
             >
               <FaceScanner
-                onScanSuccess={(descriptor, imageBase64) => {
+                onScanSuccess={(descriptor) => {
                   setFormValues({
                     ...formValues,
-                    rostroDescriptor: descriptor,
-                    fotoBase64: imageBase64
+                    rostroDescriptor: descriptor
                   });
                   setIsScanningFace(false);
                 }}
