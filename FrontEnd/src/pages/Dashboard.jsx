@@ -272,7 +272,11 @@ export default function Dashboard() {
                 <>
                   {tieneAlmuerzo && !yaAlmorzo && (
                     <button
-                      onClick={() => handleCheckIn('SALIDA_ALMUERZO')}
+                      onClick={() => {
+                        if (window.confirm('¿Estás seguro de registrar tu SALIDA A ALMORZAR en este momento?')) {
+                          handleCheckIn('SALIDA_ALMUERZO');
+                        }
+                      }}
                       disabled={geoLoading || isSubmitting || successMsg || (timeLimits?.horaInicioAlmuerzo && currentTime.format('HH:mm') < timeLimits.horaInicioAlmuerzo.substring(0, 5))}
                       className="w-full bg-amber-500 hover:bg-amber-600 text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       title={timeLimits?.horaInicioAlmuerzo && currentTime.format('HH:mm') < timeLimits.horaInicioAlmuerzo.substring(0, 5) ? `Disponible desde las ${format12h(timeLimits.horaInicioAlmuerzo)}` : ''}
@@ -283,7 +287,11 @@ export default function Dashboard() {
                   )}
 
                   <button
-                    onClick={() => handleCheckIn('SALIDA')}
+                    onClick={() => {
+                      if (window.confirm('¿Estás seguro de FINALIZAR TU JORNADA por el día de hoy?')) {
+                        handleCheckIn('SALIDA');
+                      }
+                    }}
                     disabled={geoLoading || isSubmitting || successMsg || (timeLimits?.horaFinJornada && currentTime.format('HH:mm') < timeLimits.horaFinJornada.substring(0, 5))}
                     className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     title={timeLimits?.horaFinJornada && currentTime.format('HH:mm') < timeLimits.horaFinJornada.substring(0, 5) ? `Disponible desde las ${format12h(timeLimits.horaFinJornada)}` : ''}
@@ -294,37 +302,20 @@ export default function Dashboard() {
                 </>
               )}
 
-              {attendanceStatus === 'EN_ALMUERZO' && (() => {
-                let lunchLateMinutes = 0;
-                if (timeLimits?.horaFinAlmuerzo) {
-                  const limitTimeStr = timeLimits.horaFinAlmuerzo.length === 5 ? `${timeLimits.horaFinAlmuerzo}:00` : timeLimits.horaFinAlmuerzo;
-                  const today = currentTime.format('YYYY-MM-DD');
-                  const limitObj = dayjs(`${today}T${limitTimeStr}`);
-                  const diff = currentTime.diff(limitObj, 'minute');
-                  if (diff > 0) {
-                    lunchLateMinutes = diff;
-                  }
-                }
-                const isLate = lunchLateMinutes > 0;
-
-                return (
+              {attendanceStatus === 'EN_ALMUERZO' && (
                   <button
-                    onClick={() => handleCheckIn('ENTRADA_ALMUERZO')}
+                    onClick={() => {
+                      if (window.confirm('¿Estás seguro de registrar tu REGRESO DE ALMUERZO ahora?')) {
+                        handleCheckIn('ENTRADA_ALMUERZO');
+                      }
+                    }}
                     disabled={geoLoading || isSubmitting || successMsg}
-                    className={`w-full text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-70 transition-all ${
-                      isLate ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'
-                    }`}
+                    className="w-full text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-70 transition-all bg-emerald-500 hover:bg-emerald-600"
                   >
                     <CheckCircle className="w-6 h-6" />
-                    <span>
-                      {isLate 
-                        ? `Regreso de Almuerzo (${lunchLateMinutes}m tarde)` 
-                        : 'Regreso de Almuerzo'
-                      }
-                    </span>
+                    <span>Regreso de Almuerzo</span>
                   </button>
-                );
-              })()}
+              )}
 
               {attendanceStatus === 'JORNADA_FINALIZADA' && (
                 <div className="w-full bg-slate-100 text-slate-500 py-4 rounded-2xl flex items-center justify-center space-x-3 font-bold text-lg border border-slate-200">
