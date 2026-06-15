@@ -101,7 +101,9 @@ export default function AdminHistory() {
   };
 
   const processedAttendances = attendances;
-  const filteredAttendances = processedAttendances;
+  const filteredAttendances = activeTab === 'reporte_almuerzos'
+    ? processedAttendances.filter(a => a.horaSalidaAlmuerzo)
+    : processedAttendances;
 
   const formatMinutes = (mins) => {
     if (!mins) return '0m';
@@ -410,13 +412,13 @@ export default function AdminHistory() {
             <span>General</span>
           </button>
           <button
-            onClick={() => setActiveTab('tarde_almuerzo')}
+            onClick={() => setActiveTab('reporte_almuerzos')}
             className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'tarde_almuerzo' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              activeTab === 'reporte_almuerzos' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             <Clock className="w-4 h-4" />
-            <span>Tarde de Almuerzo</span>
+            <span>Reporte Almuerzos</span>
           </button>
           <button
             onClick={() => setActiveTab('consolidado')}
@@ -852,11 +854,21 @@ export default function AdminHistory() {
                     <th className="px-6 py-4">Fecha</th>
                     <th className="px-6 py-4">Empleado</th>
                     <th className="px-6 py-4">Sede</th>
-                    <th className="px-6 py-4">Horarios Registrados</th>
-                    <th className="px-6 py-4">{activeTab === 'tarde_almuerzo' ? 'Minutos de Tardanza' : 'Horas Extras'}</th>
-                    <th className="px-6 py-4">Estado</th>
-                    <th className="px-6 py-4">Observaciones</th>
-                    <th className="px-6 py-4">Acciones</th>
+                    {activeTab === 'reporte_almuerzos' ? (
+                      <>
+                        <th className="px-6 py-4">Salida Almuerzo</th>
+                        <th className="px-6 py-4">Regreso Almuerzo</th>
+                        <th className="px-6 py-4 text-center">Tiempo Tomado</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="px-6 py-4">Horarios Registrados</th>
+                        <th className="px-6 py-4">Horas Extras</th>
+                        <th className="px-6 py-4">Estado</th>
+                        <th className="px-6 py-4">Observaciones</th>
+                        <th className="px-6 py-4">Acciones</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -876,61 +888,68 @@ export default function AdminHistory() {
                         <td className="px-6 py-4">
                           <p className="text-sm text-slate-600">{a.sede.nombre}</p>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs space-y-1">
-                          {activeTab !== 'tarde_almuerzo' && a.horaEntrada && <p><span className="text-slate-400">Entrada:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntrada).format('hh:mm A')}</span></p>}
-                          {a.horaSalidaAlmuerzo && <p><span className="text-slate-400">Sale Almz:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalidaAlmuerzo).format('hh:mm A')}</span></p>}
-                          {a.horaEntradaAlmuerzo && <p><span className="text-slate-400">Vuelve Almz:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntradaAlmuerzo).format('hh:mm A')}</span></p>}
-                          {activeTab !== 'tarde_almuerzo' && a.horaSalida && <p><span className="text-slate-400">Salida:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalida).format('hh:mm A')}</span></p>}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {activeTab === 'tarde_almuerzo' ? (
-                            a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo && a.usuario.horaFinAlmuerzo ? (() => {
-                              const limitTimeStr = a.usuario.horaFinAlmuerzo.length === 5 ? `${a.usuario.horaFinAlmuerzo}:00` : a.usuario.horaFinAlmuerzo;
-                              const returnObj = dayjs(a.horaEntradaAlmuerzo);
-                              const limitObj = dayjs(`${returnObj.format('YYYY-MM-DD')}T${limitTimeStr}`);
-                              const diff = returnObj.diff(limitObj, 'minute');
-                              return diff > 0 ? (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
-                                  + {formatMinutes(diff)} tarde
-                                </span>
-                              ) : (
-                                <span className="text-xs text-slate-400 font-medium">0m tarde</span>
-                              );
-                            })() : (
-                              <span className="text-xs text-slate-400 italic">En almuerzo...</span>
-                            )
-                          ) : (
-                            a.minutosExtra > 0 ? (
-                              <div className="flex flex-col space-y-2">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 w-fit">
-                                  Sistema: + {formatMinutes(a.minutosExtra)}
-                                </span>
-                                {a.minutosExtraAprobados !== null ? (
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">
-                                    Aprobado: {formatMinutes(a.minutosExtraAprobados)}
+                             {activeTab === 'reporte_almuerzos' ? (
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="font-medium text-slate-700">{a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : '-'}</span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="font-medium text-slate-700">{a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : '-'}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                              {a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo ? (() => {
+                                const salida = dayjs(a.horaSalidaAlmuerzo);
+                                const entrada = dayjs(a.horaEntradaAlmuerzo);
+                                const diff = entrada.diff(salida, 'minute');
+                                const horas = Math.floor(diff / 60);
+                                const minutos = diff % 60;
+                                return (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
+                                    {horas > 0 ? `${horas}h ` : ''}{minutos}m
                                   </span>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      setApprovingExtra(a);
-                                      setExtraMinutesToApprove(a.minutosExtra);
-                                    }}
-                                    className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded shadow-sm w-fit transition-colors"
-                                  >
-                                    Validar Extras
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-400 font-medium border border-transparent px-2.5 py-1">
-                                0m
-                              </span>
-                            )
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col space-y-2">
-                            {activeTab !== 'tarde_almuerzo' && (
+                                );
+                              })() : (
+                                <span className="text-xs text-slate-400 italic">{a.horaSalidaAlmuerzo ? 'En almuerzo...' : 'Sin registrar'}</span>
+                              )}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap text-xs space-y-1">
+                              {a.horaEntrada && <p><span className="text-slate-400">Entrada:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntrada).format('hh:mm A')}</span></p>}
+                              {a.horaSalidaAlmuerzo && <p><span className="text-slate-400">Sale Almz:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalidaAlmuerzo).format('hh:mm A')}</span></p>}
+                              {a.horaEntradaAlmuerzo && <p><span className="text-slate-400">Vuelve Almz:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntradaAlmuerzo).format('hh:mm A')}</span></p>}
+                              {a.horaSalida && <p><span className="text-slate-400">Salida:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalida).format('hh:mm A')}</span></p>}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {a.minutosExtra > 0 ? (
+                                <div className="flex flex-col space-y-2">
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 w-fit">
+                                    Sistema: + {formatMinutes(a.minutosExtra)}
+                                  </span>
+                                  {a.minutosExtraAprobados !== null ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">
+                                      Aprobado: {formatMinutes(a.minutosExtraAprobados)}
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setApprovingExtra(a);
+                                        setExtraMinutesToApprove(a.minutosExtra);
+                                      }}
+                                      className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded shadow-sm w-fit transition-colors"
+                                    >
+                                      Validar Extras
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 font-medium border border-transparent px-2.5 py-1">
+                                  0m
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
                               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border w-fit ${
                                 isTarde ? 'bg-amber-50 text-amber-700 border-amber-200' : 
                                 isFalta ? 'bg-red-50 text-red-700 border-red-200' : 
@@ -938,54 +957,56 @@ export default function AdminHistory() {
                               }`}>
                                 Mañana: {a.estado.nombre}
                               </span>
-                            )}
-                            {a.tardeAlmuerzo && (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border w-fit bg-red-50 text-red-700 border-red-200">
-                                Tarde de Almuerzo
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-xs text-slate-500 max-w-xs" title={a.observaciones || a.observacionesAlmuerzo}>
-                          <div className="space-y-1">
-                            {a.observaciones && <p><span className="font-semibold text-slate-700">Mañana:</span> <span className="truncate block">{a.observaciones}</span></p>}
-                            {a.observacionesAlmuerzo && <p><span className="font-semibold text-slate-700">Almuerzo:</span> <span className="truncate block">{a.observacionesAlmuerzo}</span></p>}
-                            {!a.observaciones && !a.observacionesAlmuerzo && <span className="italic text-slate-400">Sin observaciones</span>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            {a.evidenciaUrl && (
-                              <a
-                                href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaUrl}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 flex items-center justify-center"
-                                title="Ver evidencia de la mañana"
-                              >
-                                <ImageIcon className="w-4 h-4" />
-                              </a>
-                            )}
-                            {a.evidenciaAlmuerzoUrl && (
-                              <a
-                                href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaAlmuerzoUrl}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200 flex items-center justify-center"
-                                title="Ver evidencia del almuerzo"
-                              >
-                                <ImageIcon className="w-4 h-4" />
-                              </a>
-                            )}
-                            <button
-                              onClick={() => handleDeleteAttendance(a.id)}
-                              className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200 flex items-center justify-center"
-                              title="Eliminar registro"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+                            </td>
+                            <td className="px-6 py-4 text-xs text-slate-500 max-w-xs" title={a.observaciones || a.observacionesAlmuerzo}>
+                              <div className="space-y-1">
+                                {a.observaciones && <p className="truncate"><span className="font-semibold">Mañana:</span> {a.observaciones}</p>}
+                                {a.observacionesAlmuerzo && <p className="truncate"><span className="font-semibold">Almuerzo:</span> {a.observacionesAlmuerzo}</p>}
+                                {!a.observaciones && !a.observacionesAlmuerzo && <span className="italic text-slate-400">Sin observaciones</span>}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center justify-end space-x-2">
+                                {a.evidenciaUrl && (
+                                  <a
+                                    href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 flex items-center justify-center"
+                                    title="Ver evidencia de la mañana"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                  </a>
+                                )}
+                                {a.evidenciaAlmuerzoUrl && (
+                                  <a
+                                    href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaAlmuerzoUrl}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200 flex items-center justify-center"
+                                    title="Ver evidencia del almuerzo"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => { setAttendanceToEdit(a); setShowEditModal(true); }}
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(a.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })}
