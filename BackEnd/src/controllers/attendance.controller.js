@@ -177,8 +177,7 @@ const checkIn = async (req, res) => {
       });
       return res.json({ 
         mensaje: 'Regreso de almuerzo registrado', 
-        asistencia: asistenciaActualizada,
-        isTardeAlmuerzo: minutosTardeAlmuerzo > 0
+        asistencia: asistenciaActualizada
       });
     }
 
