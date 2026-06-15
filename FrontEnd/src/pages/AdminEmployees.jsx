@@ -28,7 +28,10 @@ export default function AdminEmployees() {
     horaInicioAlmuerzo: '',
     horaFinAlmuerzo: '',
     activo: true,
-    rostroDescriptor: ''
+    rostroDescriptor: '',
+    enVacaciones: false,
+    vacacionesInicio: '',
+    vacacionesFin: ''
   });
   const [formError, setFormError] = useState('');
 
@@ -67,7 +70,10 @@ export default function AdminEmployees() {
         horaInicioAlmuerzo: employee.horaInicioAlmuerzo || '',
         horaFinAlmuerzo: employee.horaFinAlmuerzo || '',
         activo: employee.activo,
-        rostroDescriptor: employee.rostroDescriptor || ''
+        rostroDescriptor: employee.rostroDescriptor || '',
+        enVacaciones: employee.enVacaciones || false,
+        vacacionesInicio: employee.vacacionesInicio ? employee.vacacionesInicio.split('T')[0] : '',
+        vacacionesFin: employee.vacacionesFin ? employee.vacacionesFin.split('T')[0] : ''
       });
     } else {
       setEditingEmployee(null);
@@ -83,7 +89,10 @@ export default function AdminEmployees() {
         horaInicioAlmuerzo: '',
         horaFinAlmuerzo: '',
         activo: true,
-        rostroDescriptor: ''
+        rostroDescriptor: '',
+        enVacaciones: false,
+        vacacionesInicio: '',
+        vacacionesFin: ''
       });
     }
     setIsModalOpen(true);
@@ -367,8 +376,8 @@ export default function AdminEmployees() {
                     />
                   </div>
 
-                  <div className="col-span-1 md:col-span-2 flex items-center mt-2">
-                    <label className="relative inline-flex items-center cursor-pointer">
+                  <div className="col-span-1 md:col-span-2 flex flex-col mt-2 space-y-4">
+                    <label className="relative inline-flex items-center cursor-pointer w-max">
                       <input
                         type="checkbox"
                         className="sr-only peer"
@@ -380,6 +389,46 @@ export default function AdminEmployees() {
                         {formValues.activo ? 'Usuario Activo en el Sistema' : 'Usuario Inactivo (Suspendido)'}
                       </span>
                     </label>
+
+                    <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-xl space-y-3">
+                      <label className="relative inline-flex items-center cursor-pointer w-max">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={formValues.enVacaciones}
+                          onChange={(e) => setFormValues({ ...formValues, enVacaciones: e.target.checked })}
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        <span className="ml-3 text-sm font-medium text-slate-800">
+                          El empleado se encuentra en Vacaciones
+                        </span>
+                      </label>
+
+                      {formValues.enVacaciones && (
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Inicio</label>
+                            <input
+                              required={formValues.enVacaciones}
+                              type="date"
+                              value={formValues.vacacionesInicio}
+                              onChange={e => setFormValues({ ...formValues, vacacionesInicio: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Fin</label>
+                            <input
+                              required={formValues.enVacaciones}
+                              type="date"
+                              value={formValues.vacacionesFin}
+                              onChange={e => setFormValues({ ...formValues, vacacionesFin: e.target.value })}
+                              className="w-full px-3 py-2 text-sm border border-orange-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none bg-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="col-span-1 md:col-span-2 mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">

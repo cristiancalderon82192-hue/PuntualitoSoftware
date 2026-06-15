@@ -91,6 +91,11 @@ model Usuario {
   horaFinAlmuerzo    String?  // Formato "13:00:00" (Opcional)
   rostroDescriptor   String?  @db.Text // Descriptor facial guardado como JSON string
   fotoPerfilUrl      String?  @db.Text // URL de la foto capturada en el registro
+  
+  // Campos de Vacaciones
+  enVacaciones       Boolean  @default(false)
+  vacacionesInicio   DateTime? @db.Date
+  vacacionesFin      DateTime? @db.Date
 
   // Relaciones (Claves Foráneas)
   rolId         Int

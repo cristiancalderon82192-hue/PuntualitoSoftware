@@ -18,7 +18,17 @@ const startCronJobs = () => {
     try {
       const hoy = new Date(dayjs.tz().format('YYYY-MM-DD') + 'T00:00:00.000Z');
 
-      // Obtener el ID del estado "AUSENTE"
+      // 1. Asegurar que el estado "VACACIONES" exista
+      let estadoVacaciones = await prisma.estadoAsistencia.findUnique({
+        where: { nombre: 'VACACIONES' }
+      });
+      if (!estadoVacaciones) {
+        estadoVacaciones = await prisma.estadoAsistencia.create({
+          data: { nombre: 'VACACIONES', descripcion: 'Día de vacaciones autorizado' }
+        });
+      }
+
+      // 2. Obtener el ID del estado "AUSENTE"
       const estadoAusente = await prisma.estadoAsistencia.findUnique({
         where: { nombre: 'AUSENTE' }
       });
@@ -37,6 +47,7 @@ const startCronJobs = () => {
       });
 
       let ausentesMarcados = 0;
+      let vacacionesMarcadas = 0;
 
       for (const usuario of usuariosActivos) {
         // Verificar si el usuario ya tiene un registro de asistencia hoy
@@ -47,22 +58,46 @@ const startCronJobs = () => {
           }
         });
 
-        // Si no tiene asistencia, se marca como AUSENTE
+        // Si no tiene asistencia, evaluamos si está de vacaciones
         if (!asistenciaHoy) {
-          await prisma.asistencia.create({
-            data: {
-              fecha: hoy,
-              usuarioId: usuario.id,
-              sedeId: usuario.sedeId,
-              estadoId: estadoAusente.id,
-              observaciones: 'ausentismo laboral'
+          let esVacacion = false;
+          if (usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
+            const inicio = dayjs(usuario.vacacionesInicio).tz().startOf('day');
+            const fin = dayjs(usuario.vacacionesFin).tz().endOf('day');
+            const hoyTz = dayjs(hoy).tz();
+
+            if (hoyTz.isAfter(inicio.subtract(1, 'second')) && hoyTz.isBefore(fin.add(1, 'second'))) {
+              esVacacion = true;
             }
-          });
-          ausentesMarcados++;
+          }
+
+          if (esVacacion) {
+            await prisma.asistencia.create({
+              data: {
+                fecha: hoy,
+                usuarioId: usuario.id,
+                sedeId: usuario.sedeId,
+                estadoId: estadoVacaciones.id,
+                observaciones: 'Ausencia por vacaciones autorizadas'
+              }
+            });
+            vacacionesMarcadas++;
+          } else {
+            await prisma.asistencia.create({
+              data: {
+                fecha: hoy,
+                usuarioId: usuario.id,
+                sedeId: usuario.sedeId,
+                estadoId: estadoAusente.id,
+                observaciones: 'ausentismo laboral'
+              }
+            });
+            ausentesMarcados++;
+          }
         }
       }
 
-      console.log(`[CRON] Verificación completada. Se marcaron ${ausentesMarcados} empleados como ausentes.`);
+      console.log(`[CRON] Verificación completada. Ausentes: ${ausentesMarcados}, Vacaciones: ${vacacionesMarcadas}.`);
       
     } catch (error) {
       console.error('[CRON] Error al verificar ausencias:', error);
@@ -92,6 +127,16 @@ const startCronJobs = () => {
 const checkPastAbsences = async (daysBack = 15) => {
   console.log(`[STARTUP] Verificando inasistencias pasadas (últimos ${daysBack} días)...`);
   try {
+    // Asegurar estado VACACIONES en verificación retroactiva
+    let estadoVacaciones = await prisma.estadoAsistencia.findUnique({
+      where: { nombre: 'VACACIONES' }
+    });
+    if (!estadoVacaciones) {
+      estadoVacaciones = await prisma.estadoAsistencia.create({
+        data: { nombre: 'VACACIONES', descripcion: 'Día de vacaciones autorizado' }
+      });
+    }
+
     const estadoAusente = await prisma.estadoAsistencia.findUnique({
       where: { nombre: 'AUSENTE' }
     });
@@ -109,6 +154,7 @@ const checkPastAbsences = async (daysBack = 15) => {
     });
 
     let totalAusentesRetroactivos = 0;
+    let totalVacacionesRetroactivos = 0;
 
     for (let i = 1; i <= daysBack; i++) {
       const fechaCheckStr = dayjs.tz().subtract(i, 'day').format('YYYY-MM-DD');
@@ -127,22 +173,46 @@ const checkPastAbsences = async (daysBack = 15) => {
         });
 
         if (!asistencia) {
-          await prisma.asistencia.create({
-            data: {
-              fecha: fechaObj,
-              usuarioId: usuario.id,
-              sedeId: usuario.sedeId,
-              estadoId: estadoAusente.id,
-              observaciones: 'ausentismo laboral (auto-recuperado)'
+          let esVacacion = false;
+          if (usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
+            const inicio = dayjs(usuario.vacacionesInicio).tz().startOf('day');
+            const fin = dayjs(usuario.vacacionesFin).tz().endOf('day');
+            const targetTz = dayjs(fechaObj).tz();
+
+            if (targetTz.isAfter(inicio.subtract(1, 'second')) && targetTz.isBefore(fin.add(1, 'second'))) {
+              esVacacion = true;
             }
-          });
-          totalAusentesRetroactivos++;
+          }
+
+          if (esVacacion) {
+            await prisma.asistencia.create({
+              data: {
+                fecha: fechaObj,
+                usuarioId: usuario.id,
+                sedeId: usuario.sedeId,
+                estadoId: estadoVacaciones.id,
+                observaciones: 'Ausencia por vacaciones autorizadas (auto-recuperado)'
+              }
+            });
+            totalVacacionesRetroactivos++;
+          } else {
+            await prisma.asistencia.create({
+              data: {
+                fecha: fechaObj,
+                usuarioId: usuario.id,
+                sedeId: usuario.sedeId,
+                estadoId: estadoAusente.id,
+                observaciones: 'ausentismo laboral (auto-recuperado)'
+              }
+            });
+            totalAusentesRetroactivos++;
+          }
         }
       }
     }
 
-    if (totalAusentesRetroactivos > 0) {
-      console.log(`[STARTUP] Se generaron ${totalAusentesRetroactivos} inasistencias pasadas que no estaban registradas.`);
+    if (totalAusentesRetroactivos > 0 || totalVacacionesRetroactivos > 0) {
+      console.log(`[STARTUP] Auto-recuperación: ${totalAusentesRetroactivos} Ausentes, ${totalVacacionesRetroactivos} Vacaciones.`);
     } else {
       console.log(`[STARTUP] El historial de asistencias está al día.`);
     }

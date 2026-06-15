@@ -133,13 +133,23 @@ export default function AdminHistory() {
           llegadasTarde: 0,
           tardesAlmuerzo: 0,
           faltas: 0,
+          vacaciones: 0,
           totalMinutosExtra: 0,
           totalMinutosTarde: 0
         };
       }
-      grouped[a.usuarioId].diasAsistidos++;
+      
+      // Contar estados
+      if (a.estado.nombre === 'AUSENTE') {
+        grouped[a.usuarioId].faltas++;
+      } else if (a.estado.nombre === 'VACACIONES') {
+        grouped[a.usuarioId].vacaciones++;
+      } else {
+        // Solo cuenta como día asistido si no faltó ni estuvo de vacaciones
+        grouped[a.usuarioId].diasAsistidos++;
+      }
+
       if (a.estado.nombre === 'TARDE') grouped[a.usuarioId].llegadasTarde++;
-      if (a.estado.nombre === 'AUSENTE') grouped[a.usuarioId].faltas++;
       if (a.tardeAlmuerzo) grouped[a.usuarioId].tardesAlmuerzo++;
       if (a.minutosExtraAprobados) grouped[a.usuarioId].totalMinutosExtra += a.minutosExtraAprobados;
       if (a.minutosTarde) grouped[a.usuarioId].totalMinutosTarde += a.minutosTarde;
@@ -269,6 +279,7 @@ export default function AdminHistory() {
           'Días Asistidos': c.diasAsistidos,
           'Llegadas Tarde': c.llegadasTarde,
           'Faltas': c.faltas,
+          'Vacaciones': c.vacaciones,
           'Tardes de Almuerzo': c.tardesAlmuerzo,
           'Hrs Extras': formatMinutes(c.totalMinutosExtra),
           'Hrs Tardanzas': formatMinutes(c.totalMinutosTarde),

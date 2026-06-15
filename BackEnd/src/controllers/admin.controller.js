@@ -181,7 +181,11 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor } = req.body;
+    const { 
+      documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
+      horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor,
+      enVacaciones, vacacionesInicio, vacacionesFin
+    } = req.body;
 
     const hashedPassword = await bcrypt.hash(contrasena, 10);
 
@@ -197,7 +201,10 @@ const createUser = async (req, res) => {
       horaInicioAlmuerzo: horaInicioAlmuerzo || null,
       horaFinAlmuerzo: horaFinAlmuerzo || null,
       activo: Boolean(activo),
-      rostroDescriptor: rostroDescriptor || null
+      rostroDescriptor: rostroDescriptor || null,
+      enVacaciones: Boolean(enVacaciones),
+      vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
+      vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null
     };
 
     const nuevoUsuario = await prisma.usuario.create({
@@ -217,7 +224,11 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64 } = req.body;
+    const { 
+      documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
+      horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64,
+      enVacaciones, vacacionesInicio, vacacionesFin
+    } = req.body;
 
     let dataToUpdate = {
       documento,
@@ -229,6 +240,9 @@ const updateUser = async (req, res) => {
       horarioId: Number(horarioId),
       horaInicioAlmuerzo: horaInicioAlmuerzo || null,
       horaFinAlmuerzo: horaFinAlmuerzo || null,
+      enVacaciones: Boolean(enVacaciones),
+      vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
+      vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null
     };
 
     if (rostroDescriptor) {
