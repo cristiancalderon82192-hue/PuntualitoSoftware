@@ -15,7 +15,7 @@ export default function AdminLayout({ children }) {
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Empleados', path: '/admin/empleados', icon: Users },
-    { name: 'Historial', path: '/admin/historial', icon: ClipboardList },
+    { name: 'Historial y Reportes', path: '/admin/historial', icon: ClipboardList },
     { name: 'Configuración', path: '/admin/configuracion', icon: Settings },
   ];
 

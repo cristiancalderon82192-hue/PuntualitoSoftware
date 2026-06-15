@@ -8,7 +8,8 @@ const {
   updateUser,
   toggleUserStatus,
   getFormData,
-  approveExtras
+  approveExtras,
+  getLateArrivalsReport
 } = require('../controllers/admin.controller');
 const { verifyToken, isAdmin } = require('../middlewares/auth.middleware');
 
@@ -22,6 +23,7 @@ router.get('/stats', getDashboardStats);
 router.get('/attendances', getAttendances);
 router.delete('/attendances/:id', deleteAttendance);
 router.put('/attendances/:id/approve-extras', approveExtras);
+router.get('/reports/tardanzas', getLateArrivalsReport);
 
 // Gestión de Empleados (CRUD)
 router.get('/form-data', getFormData);

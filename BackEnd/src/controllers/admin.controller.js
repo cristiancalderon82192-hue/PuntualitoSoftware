@@ -325,6 +325,51 @@ const approveExtras = async (req, res) => {
   }
 };
 
+const getLateArrivalsReport = async (req, res) => {
+  try {
+    const causas = await prisma.causaTardanza.findMany({
+      where: { activo: true }
+    });
+
+    let reportData = causas.map(c => ({ name: c.nombre, count: 0 }));
+    let otrosCount = 0;
+
+    const tardanzas = await prisma.asistencia.findMany({
+      where: {
+        estado: { nombre: 'TARDE' },
+        observaciones: { not: null, not: '' }
+      },
+      select: { observaciones: true }
+    });
+
+    tardanzas.forEach(t => {
+      let matched = false;
+      for (const causa of causas) {
+        if (t.observaciones.startsWith(causa.nombre)) {
+          const reportItem = reportData.find(item => item.name === causa.nombre);
+          if (reportItem) {
+            reportItem.count += 1;
+          }
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        otrosCount += 1;
+      }
+    });
+
+    if (otrosCount > 0) {
+      reportData.push({ name: 'Otros / Sin especificar', count: otrosCount });
+    }
+
+    res.json(reportData.filter(item => item.count > 0));
+  } catch (error) {
+    console.error('Error en getLateArrivalsReport:', error);
+    res.status(500).json({ error: 'Error al obtener reporte de tardanzas' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAttendances,
@@ -334,5 +379,6 @@ module.exports = {
   updateUser,
   toggleUserStatus,
   getFormData,
-  approveExtras
+  approveExtras,
+  getLateArrivalsReport
 };

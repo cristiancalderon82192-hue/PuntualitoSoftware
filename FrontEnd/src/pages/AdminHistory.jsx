@@ -3,6 +3,7 @@ import api from '../services/api';
 import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon } from 'lucide-react';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
 
 export default function AdminHistory() {
   const [attendances, setAttendances] = useState([]);
@@ -24,6 +25,10 @@ export default function AdminHistory() {
   // Extra hours approval state
   const [approvingExtra, setApprovingExtra] = useState(null);
   const [extraMinutesToApprove, setExtraMinutesToApprove] = useState('');
+
+  // Report State
+  const [reportData, setReportData] = useState([]);
+  const [loadingReport, setLoadingReport] = useState(true);
 
   const loadFiltersData = async () => {
     try {
@@ -57,9 +62,30 @@ export default function AdminHistory() {
     }
   };
 
+  const loadReportData = async () => {
+    try {
+      const res = await api.get('/admin/reports/tardanzas');
+      // Sort by count descending
+      const sorted = res.data.sort((a, b) => b.count - a.count);
+      setReportData(sorted);
+    } catch (error) {
+      console.error('Error cargando reporte de tardanzas:', error);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
   useEffect(() => {
     loadFiltersData();
     loadAttendances();
+    loadReportData();
+
+    // Polling cada 10 segundos
+    const interval = setInterval(() => {
+      loadReportData();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleFilterChange = (e) => {
@@ -220,6 +246,57 @@ export default function AdminHistory() {
             <Download className="w-5 h-5" />
             <span>Exportar a Excel</span>
           </button>
+        </div>
+
+        {/* Gráfico Animado en Tiempo Real (Reporte) */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Causas de Llegadas Tarde</h3>
+              <p className="text-sm text-slate-500">Actualización en tiempo real (Polling cada 10s)</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-medium text-emerald-600">En Vivo</span>
+            </div>
+          </div>
+          
+          <div className="h-64 w-full">
+            {loadingReport ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin"></div>
+              </div>
+            ) : reportData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={reportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar 
+                    dataKey="count" 
+                    name="Nº de Casos"
+                    radius={[6, 6, 0, 0]}
+                    animationDuration={1500}
+                  >
+                    {reportData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#3b82f6'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
+                No hay registros de llegadas tarde con causa registrada.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
