@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2, Award } from 'lucide-react';
+import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2, Award, Edit } from 'lucide-react';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
