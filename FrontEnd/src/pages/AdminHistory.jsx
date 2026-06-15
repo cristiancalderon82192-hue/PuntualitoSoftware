@@ -4,7 +4,7 @@ import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { useRef } from 'react';
 
@@ -149,7 +149,7 @@ export default function AdminHistory() {
 
   const consolidatedData = getConsolidatedData();
 
-  const getTopPuntuales = () => {
+  const getPuntualidadRanking = () => {
     const userTimes = {};
     
     filteredAttendances.forEach(a => {
@@ -160,7 +160,9 @@ export default function AdminHistory() {
       
       if (!userTimes[a.usuarioId]) {
         userTimes[a.usuarioId] = {
-          name: `${a.usuario.nombre.split(' ')[0]} ${a.usuario.apellido.split(' ')[0]}`,
+          name: `${a.usuario.nombre} ${a.usuario.apellido}`,
+          shortName: `${a.usuario.nombre.split(' ')[0]} ${a.usuario.apellido.split(' ')[0]}`,
+          documento: a.usuario.documento,
           totalMinutes: 0,
           count: 0
         };
@@ -179,17 +181,21 @@ export default function AdminHistory() {
       const formattedTime = `${displayH.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
       
       return {
-        name: u.name,
+        name: u.shortName,
+        fullName: u.name,
+        documento: u.documento,
+        diasAsistidos: u.count,
         avgMins: avgMins,
         avgTimeFormatted: formattedTime
       };
     });
     
     // Sort by lowest avgMins (earliest arrivals)
-    return averaged.sort((a, b) => a.avgMins - b.avgMins).slice(0, 5);
+    return averaged.sort((a, b) => a.avgMins - b.avgMins);
   };
 
-  const topPuntuales = getTopPuntuales();
+  const puntualidadRanking = getPuntualidadRanking();
+  const topPuntuales = puntualidadRanking.slice(0, 5);
 
   const handleViewDetails = (usuarioId) => {
     setSelectedEmployeeDetails(usuarioId);
@@ -226,60 +232,65 @@ export default function AdminHistory() {
   };
 
   const handleExportExcel = () => {
-    if (attendances.length === 0) {
-      alert('No hay datos para exportar en este rango.');
-      return;
+    try {
+      if (attendances.length === 0) {
+        alert('No hay datos para exportar en este rango.');
+        return;
+      }
+
+      // Preparar datos para Excel
+      const excelData = processedAttendances.map(a => ({
+        'Fecha': dayjs(a.fecha).add(5, 'hour').format('DD/MM/YYYY'), // Ajuste simple si fecha guarda midnight UTC
+        'Entrada': a.horaEntrada ? dayjs(a.horaEntrada).format('hh:mm A') : 'N/A',
+        'Salida Almuerzo': a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
+        'Regreso Almuerzo': a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
+        'Salida Jornada': a.horaSalida ? dayjs(a.horaSalida).format('hh:mm A') : 'N/A',
+        'Extras (Sistema)': formatMinutes(a.minutosExtra),
+        'Extras (Aprobadas)': a.minutosExtraAprobados !== null ? formatMinutes(a.minutosExtraAprobados) : 'Pendiente',
+        'Tardanzas': formatMinutes(a.minutosTarde),
+        'Documento': a.usuario.documento,
+        'Empleado': `${a.usuario.nombre} ${a.usuario.apellido}`,
+        'Sede': a.sede.nombre,
+        'Estado (Día)': a.estado.nombre,
+        'Tarde de Almuerzo': a.tardeAlmuerzo ? 'SÍ' : 'NO',
+        'Causa Tardanza (Mañana)': a.causaTardanza || 'N/A',
+        'Justificación (Mañana)': a.observaciones || 'N/A',
+        'Causa Tardanza (Almuerzo)': a.causaTardanzaAlmuerzo || 'N/A',
+        'Justificación (Almuerzo)': a.observacionesAlmuerzo || 'N/A'
+      }));
+
+      // Preparar datos para Excel Consolidado
+      const excelConsolidatedData = consolidatedData.map(c => {
+        const balance = c.totalMinutosExtra - c.totalMinutosTarde;
+        return {
+          'Empleado': `${c.usuario.nombre} ${c.usuario.apellido}`,
+          'Documento': c.usuario.documento,
+          'Sede': c.sede.nombre,
+          'Días Asistidos': c.diasAsistidos,
+          'Llegadas Tarde': c.llegadasTarde,
+          'Faltas': c.faltas,
+          'Tardes de Almuerzo': c.tardesAlmuerzo,
+          'Hrs Extras': formatMinutes(c.totalMinutosExtra),
+          'Hrs Tardanzas': formatMinutes(c.totalMinutosTarde),
+          'Balance': balance === 0 ? '0m' : balance > 0 ? `+ ${formatMinutes(balance)}` : `- ${formatMinutes(Math.abs(balance))}`
+        };
+      });
+
+      // Crear libro de trabajo
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const worksheetConsolidado = XLSX.utils.json_to_sheet(excelConsolidatedData);
+      
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Detalle Asistencias");
+      XLSX.utils.book_append_sheet(workbook, worksheetConsolidado, "Consolidado");
+
+      // Descargar
+      const fileName = `Reporte_Asistencia_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    } catch (error) {
+      console.error('Error al exportar a Excel:', error);
+      alert('Error al exportar a Excel: ' + error.message);
     }
-
-    // Preparar datos para Excel
-    const excelData = processedAttendances.map(a => ({
-      'Fecha': dayjs(a.fecha).add(5, 'hour').format('DD/MM/YYYY'), // Ajuste simple si fecha guarda midnight UTC
-      'Entrada': a.horaEntrada ? dayjs(a.horaEntrada).format('hh:mm A') : 'N/A',
-      'Salida Almuerzo': a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
-      'Regreso Almuerzo': a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
-      'Salida Jornada': a.horaSalida ? dayjs(a.horaSalida).format('hh:mm A') : 'N/A',
-      'Extras (Sistema)': formatMinutes(a.minutosExtra),
-      'Extras (Aprobadas)': a.minutosExtraAprobados !== null ? formatMinutes(a.minutosExtraAprobados) : 'Pendiente',
-      'Tardanzas': formatMinutes(a.minutosTarde),
-      'Documento': a.usuario.documento,
-      'Empleado': `${a.usuario.nombre} ${a.usuario.apellido}`,
-      'Sede': a.sede.nombre,
-      'Estado (Día)': a.estado.nombre,
-      'Tarde de Almuerzo': a.tardeAlmuerzo ? 'SÍ' : 'NO',
-      'Causa Tardanza (Mañana)': a.causaTardanza || 'N/A',
-      'Justificación (Mañana)': a.observaciones || 'N/A',
-      'Causa Tardanza (Almuerzo)': a.causaTardanzaAlmuerzo || 'N/A',
-      'Justificación (Almuerzo)': a.observacionesAlmuerzo || 'N/A'
-    }));
-
-    // Preparar datos para Excel Consolidado
-    const excelConsolidatedData = consolidatedData.map(c => {
-      const balance = c.totalMinutosExtra - c.totalMinutosTarde;
-      return {
-        'Empleado': `${c.usuario.nombre} ${c.usuario.apellido}`,
-        'Documento': c.usuario.documento,
-        'Sede': c.sede.nombre,
-        'Días Asistidos': c.diasAsistidos,
-        'Llegadas Tarde': c.llegadasTarde,
-        'Faltas': c.faltas,
-        'Tardes de Almuerzo': c.tardesAlmuerzo,
-        'Hrs Extras': formatMinutes(c.totalMinutosExtra),
-        'Hrs Tardanzas': formatMinutes(c.totalMinutosTarde),
-        'Balance': balance === 0 ? '0m' : balance > 0 ? `+ ${formatMinutes(balance)}` : `- ${formatMinutes(Math.abs(balance))}`
-      };
-    });
-
-    // Crear libro de trabajo
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const worksheetConsolidado = XLSX.utils.json_to_sheet(excelConsolidatedData);
-    
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Detalle Asistencias");
-    XLSX.utils.book_append_sheet(workbook, worksheetConsolidado, "Consolidado");
-
-    // Descargar
-    const fileName = `Reporte_Asistencia_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
   };
 
   const handleExportPDF = async () => {
@@ -287,23 +298,21 @@ export default function AdminHistory() {
     setIsExportingPDF(true);
     try {
       const element = reportRef.current;
-      const canvas = await html2canvas(element, { 
-        scale: 2, 
-        useCORS: true,
-        backgroundColor: '#ffffff'
+      const imgData = await toPng(element, { 
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
       });
       
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Reporte_Tardanzas_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
       console.error('Error al generar PDF', error);
-      alert('Hubo un error al generar el PDF.');
+      alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDF(false);
     }
@@ -314,23 +323,21 @@ export default function AdminHistory() {
     setIsExportingPDFPuntuales(true);
     try {
       const element = reportPuntualesRef.current;
-      const canvas = await html2canvas(element, { 
-        scale: 2, 
-        useCORS: true,
-        backgroundColor: '#ffffff'
+      const imgData = await toPng(element, { 
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
       });
       
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('l', 'mm', 'a4'); // Apaisado (landscape)
-      
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Ranking_Puntualidad_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
       console.error('Error al generar PDF Puntualidad', error);
-      alert('Hubo un error al generar el PDF.');
+      alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDFPuntuales(false);
     }
@@ -339,18 +346,42 @@ export default function AdminHistory() {
   return (
     <div className="p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between mb-8 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-800">Historial y Reportes</h2>
             <p className="text-slate-500">Filtra y exporta las asistencias de los empleados.</p>
           </div>
-          <button 
-            onClick={handleExportExcel}
-            className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm font-medium"
-          >
-            <Download className="w-5 h-5" />
-            <span>Exportar a Excel</span>
-          </button>
+          <div className="flex flex-col space-y-3">
+            <button 
+              onClick={handleExportExcel}
+              className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm font-medium w-full"
+            >
+              <Download className="w-5 h-5" />
+              <span>Exportar a Excel</span>
+            </button>
+
+            {activeTab === 'reportes' && (
+              <button 
+                onClick={handleExportPDF}
+                disabled={isExportingPDF}
+                className="flex items-center justify-center space-x-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 transition-colors shadow-sm font-medium disabled:opacity-50 w-full"
+              >
+                <Download className="w-5 h-5" />
+                <span>{isExportingPDF ? 'Generando PDF...' : 'Descargar Reporte PDF'}</span>
+              </button>
+            )}
+
+            {activeTab === 'puntuales' && (
+              <button 
+                onClick={handleExportPDFPuntuales}
+                disabled={isExportingPDFPuntuales}
+                className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors shadow-sm font-medium disabled:opacity-50 w-full"
+              >
+                <Download className="w-5 h-5" />
+                <span>{isExportingPDFPuntuales ? 'Generando PDF...' : 'Descargar Ranking PDF'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -479,18 +510,6 @@ export default function AdminHistory() {
         {/* Contenido Principal */}
         {activeTab === 'reportes' ? (
           <div className="space-y-6">
-            
-            <div className="flex justify-end">
-              <button 
-                onClick={handleExportPDF}
-                disabled={isExportingPDF}
-                className="flex items-center justify-center space-x-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 transition-colors shadow-sm font-medium disabled:opacity-50"
-              >
-                <Download className="w-5 h-5" />
-                <span>{isExportingPDF ? 'Generando PDF...' : 'Descargar Reporte PDF'}</span>
-              </button>
-            </div>
-
             <div ref={reportRef} className="space-y-6 bg-slate-50 p-4 rounded-2xl">
               
               <div className="grid grid-cols-1 gap-6">
@@ -633,17 +652,6 @@ export default function AdminHistory() {
           </div>
         ) : activeTab === 'puntuales' ? (
           <div className="space-y-6">
-            <div className="flex justify-end">
-              <button 
-                onClick={handleExportPDFPuntuales}
-                disabled={isExportingPDFPuntuales}
-                className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm font-medium disabled:opacity-50"
-              >
-                <Download className="w-5 h-5" />
-                <span>{isExportingPDFPuntuales ? 'Generando PDF...' : 'Descargar Ranking PDF'}</span>
-              </button>
-            </div>
-
             <div ref={reportPuntualesRef} className="bg-slate-50 p-4 rounded-2xl">
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
                 <div className="mb-4 flex items-center space-x-3">
@@ -699,6 +707,63 @@ export default function AdminHistory() {
                       No hay suficientes datos para el ranking.
                     </div>
                   )}
+                </div>
+              </div>
+              
+              {/* Tabla de Ranking Completo */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-6">
+                <div className="p-5 border-b border-slate-100">
+                  <h3 className="text-lg font-bold text-slate-800">Ranking Completo de Puntualidad</h3>
+                  <p className="text-sm text-slate-500">Listado de todos los empleados ordenados de mejor a menor promedio de hora de llegada</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <th className="px-6 py-4 w-16 text-center">Top</th>
+                        <th className="px-6 py-4">Empleado</th>
+                        <th className="px-6 py-4 text-center">Días Asistidos</th>
+                        <th className="px-6 py-4 text-center">Promedio de Llegada</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {puntualidadRanking.map((emp, index) => (
+                        <tr key={emp.documento} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
+                              index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                              index === 1 ? 'bg-slate-200 text-slate-700' :
+                              index === 2 ? 'bg-amber-100 text-amber-700' :
+                              'bg-emerald-50 text-emerald-700'
+                            }`}>
+                              #{index + 1}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-slate-800">{emp.fullName}</p>
+                            <p className="text-xs text-slate-500 font-mono">{emp.documento}</p>
+                          </td>
+                          <td className="px-6 py-4 text-center font-medium text-slate-600">
+                            {emp.diasAsistidos} días
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                              index < 5 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+                            }`}>
+                              {emp.avgTimeFormatted}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {puntualidadRanking.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="px-6 py-10 text-center text-slate-500">
+                            No se encontraron registros de asistencias para calcular el ranking.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

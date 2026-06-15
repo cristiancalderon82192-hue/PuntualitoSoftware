@@ -17,6 +17,7 @@
     "dayjs": "^1.11.21",
     "face-api.js": "^0.22.2",
     "framer-motion": "^12.40.0",
+    "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
