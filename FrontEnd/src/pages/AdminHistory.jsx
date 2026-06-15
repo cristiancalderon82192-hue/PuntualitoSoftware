@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2 } from 'lucide-react';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
@@ -248,57 +248,6 @@ export default function AdminHistory() {
           </button>
         </div>
 
-        {/* Gráfico Animado en Tiempo Real (Reporte) */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">Causas de Llegadas Tarde</h3>
-              <p className="text-sm text-slate-500">Actualización en tiempo real (Polling cada 10s)</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-              </span>
-              <span className="text-xs font-medium text-emerald-600">En Vivo</span>
-            </div>
-          </div>
-          
-          <div className="h-64 w-full">
-            {loadingReport ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin"></div>
-              </div>
-            ) : reportData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={reportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
-                  <Tooltip 
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Bar 
-                    dataKey="count" 
-                    name="Nº de Casos"
-                    radius={[6, 6, 0, 0]}
-                    animationDuration={1500}
-                  >
-                    {reportData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#3b82f6'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
-                No hay registros de llegadas tarde con causa registrada.
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Tabs */}
         <div className="flex space-x-1 bg-slate-200/50 p-1 rounded-xl w-full max-w-2xl mb-6">
           <button
@@ -326,7 +275,18 @@ export default function AdminHistory() {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Consolidado por Empleado</span>
+            <span className="hidden sm:inline">Consolidado por Empleado</span>
+            <span className="sm:hidden">Consolidado</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('reportes')}
+            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'reportes' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Reportes de Tardanzas</span>
+            <span className="sm:hidden">Reportes</span>
           </button>
         </div>
 
@@ -401,7 +361,130 @@ export default function AdminHistory() {
           </form>
         </div>
 
-        {/* Data Table */}
+        {/* Contenido Principal */}
+        {activeTab === 'reportes' ? (
+          <div className="space-y-6">
+            {/* Gráfico Animado en Tiempo Real (Reporte) */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Causas de Llegadas Tarde (Global)</h3>
+                  <p className="text-sm text-slate-500">Actualización en tiempo real (Polling cada 10s)</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-xs font-medium text-emerald-600">En Vivo</span>
+                </div>
+              </div>
+              
+              <div className="h-64 w-full">
+                {loadingReport ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin"></div>
+                  </div>
+                ) : reportData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={reportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
+                      <Tooltip 
+                        cursor={{ fill: '#f8fafc' }}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Bar 
+                        dataKey="count" 
+                        name="Nº de Casos"
+                        radius={[6, 6, 0, 0]}
+                        animationDuration={1500}
+                      >
+                        {reportData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#3b82f6'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
+                    No hay registros de llegadas tarde con causa registrada.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tabla Detallada de Tardanzas Filtrada */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-5 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800">Detalle de Tardanzas</h3>
+                <p className="text-sm text-slate-500">Filtrado por las fechas y parámetros de arriba</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      <th className="px-6 py-4">Fecha</th>
+                      <th className="px-6 py-4">Empleado</th>
+                      <th className="px-6 py-4 text-center">Minutos Tarde</th>
+                      <th className="px-6 py-4">Causa / Justificación</th>
+                      <th className="px-6 py-4 text-center">Evidencia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE').map((a) => (
+                      <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
+                          <p className="text-xs text-slate-500">Llegó a las: {dayjs(a.horaEntrada).format('hh:mm A')}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-slate-800">{a.usuario.nombre} {a.usuario.apellido}</p>
+                          <p className="text-xs text-slate-500">{a.sede.nombre}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+                            {formatMinutes(a.minutosTarde)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-md">
+                          {a.observaciones ? (
+                            <span className="font-medium">{a.observaciones}</span>
+                          ) : (
+                            <span className="text-slate-400 italic">Sin justificación</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {a.evidenciaUrl ? (
+                            <a
+                              href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                              title="Ver evidencia"
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE').length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
+                          No se encontraron llegadas tarde en el periodo seleccionado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
             {loading ? (
@@ -629,6 +712,7 @@ export default function AdminHistory() {
             )}
           </div>
         </div>
+        )}
 
       </div>
 
