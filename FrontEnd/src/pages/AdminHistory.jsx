@@ -145,47 +145,20 @@ export default function AdminHistory() {
     return Object.values(grouped).sort((a, b) => b.diasAsistidos - a.diasAsistidos);
   };
 
+  const consolidatedData = getConsolidatedData();
+
   const getTopPuntuales = () => {
-    const userTimes = {};
-    
-    filteredAttendances.forEach(a => {
-      if (!a.horaEntrada || a.estado.nombre === 'AUSENTE') return;
-      
-      const entryTime = dayjs(a.horaEntrada);
-      const minutesFromMidnight = entryTime.hour() * 60 + entryTime.minute();
-      
-      if (!userTimes[a.usuarioId]) {
-        userTimes[a.usuarioId] = {
-          name: `${a.usuario.nombre.split(' ')[0]} ${a.usuario.apellido.split(' ')[0]}`,
-          totalMinutes: 0,
-          count: 0
-        };
-      }
-      
-      userTimes[a.usuarioId].totalMinutes += minutesFromMidnight;
-      userTimes[a.usuarioId].count += 1;
-    });
-    
-    const averaged = Object.values(userTimes).map(u => {
-      const avgMins = Math.round(u.totalMinutes / u.count);
-      const hh = Math.floor(avgMins / 60);
-      const mm = avgMins % 60;
-      const isPM = hh >= 12;
-      const displayH = hh % 12 === 0 ? 12 : hh % 12;
-      const formattedTime = `${displayH.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
-      
-      return {
-        name: u.name,
-        avgMins: avgMins,
-        avgTimeFormatted: formattedTime
-      };
-    });
-    
-    // Sort by lowest avgMins (earliest arrivals)
-    return averaged.sort((a, b) => a.avgMins - b.avgMins).slice(0, 5);
+    return consolidatedData
+      .map(c => ({
+        name: `${c.usuario.nombre.split(' ')[0]} ${c.usuario.apellido.split(' ')[0]}`,
+        puntuales: c.diasAsistidos - c.llegadasTarde - c.tardesAlmuerzo,
+        total: c.diasAsistidos
+      }))
+      .filter(c => c.total > 0 && c.puntuales > 0)
+      .sort((a, b) => b.puntuales - a.puntuales || b.total - a.total)
+      .slice(0, 5);
   };
 
-  const consolidatedData = getConsolidatedData();
   const topPuntuales = getTopPuntuales();
 
   const handleViewDetails = (usuarioId) => {
@@ -509,7 +482,7 @@ export default function AdminHistory() {
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
                   <div className="mb-4">
                     <h3 className="text-lg font-bold text-slate-800">Top 5: Empleados Más Puntuales</h3>
-                    <p className="text-sm text-slate-500">Por promedio de hora de llegada (Filtrado)</p>
+                    <p className="text-sm text-slate-500">Por cantidad de días sin tardanzas (Filtrado)</p>
                   </div>
                   
                   <div className="flex-1 min-h-[250px] w-full">
@@ -522,23 +495,18 @@ export default function AdminHistory() {
                             axisLine={false} 
                             tickLine={false} 
                             tick={{ fontSize: 12, fill: '#64748b' }}
-                            domain={['dataMin - 30', 'dataMax + 30']}
-                            tickFormatter={(val) => {
-                              const hh = Math.floor(val / 60);
-                              const mm = val % 60;
-                              return `${(hh % 12 || 12)}:${mm.toString().padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
-                            }}
+                            allowDecimals={false}
                           />
                           <Tooltip 
                             cursor={{ fill: '#f8fafc' }}
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             formatter={(value, name, props) => {
-                              return [props.payload.avgTimeFormatted, 'Promedio de Llegada'];
+                              return [`${value} días (${props.payload.total} asistidos)`, 'Días Puntuales'];
                             }}
                           />
                           <Bar 
-                            dataKey="avgMins" 
-                            name="Promedio"
+                            dataKey="puntuales" 
+                            name="Días Puntuales"
                             radius={[6, 6, 0, 0]}
                             animationDuration={1500}
                           >
