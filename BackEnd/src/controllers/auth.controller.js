@@ -1,6 +1,12 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/db');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // Controlador para el Login
 const login = async (req, res) => {
@@ -22,6 +28,18 @@ const login = async (req, res) => {
 
     if (!usuario.activo) {
       return res.status(403).json({ error: 'El usuario está desactivado' });
+    }
+
+    if (usuario.rol.nombre === 'EMPLEADO' && usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
+      const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
+      const inicio = dayjs(usuario.vacacionesInicio).tz(EMPRESA_TZ).startOf('day');
+      const fin = dayjs(usuario.vacacionesFin).tz(EMPRESA_TZ).endOf('day');
+      const hoyTz = dayjs().tz(EMPRESA_TZ);
+
+      if (hoyTz.isAfter(inicio.subtract(1, 'second')) && hoyTz.isBefore(fin.add(1, 'second'))) {
+        const regreso = dayjs(usuario.vacacionesFin).tz(EMPRESA_TZ).add(1, 'day').format('DD/MM/YYYY');
+        return res.status(403).json({ error: `Estás en vacaciones. Tu ingreso es el ${regreso}.` });
+      }
     }
 
     // 2. Verificar la contraseña encriptada
@@ -89,6 +107,18 @@ const loginEmpleado = async (req, res) => {
 
     if (usuario.rol.nombre !== 'EMPLEADO') {
       return res.status(403).json({ error: 'Este acceso es exclusivo para empleados' });
+    }
+
+    if (usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
+      const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
+      const inicio = dayjs(usuario.vacacionesInicio).tz(EMPRESA_TZ).startOf('day');
+      const fin = dayjs(usuario.vacacionesFin).tz(EMPRESA_TZ).endOf('day');
+      const hoyTz = dayjs().tz(EMPRESA_TZ);
+
+      if (hoyTz.isAfter(inicio.subtract(1, 'second')) && hoyTz.isBefore(fin.add(1, 'second'))) {
+        const regreso = dayjs(usuario.vacacionesFin).tz(EMPRESA_TZ).add(1, 'day').format('DD/MM/YYYY');
+        return res.status(403).json({ error: `Estás en vacaciones. Tu ingreso es el ${regreso}.` });
+      }
     }
 
     if (!usuario.rostroDescriptor) {
