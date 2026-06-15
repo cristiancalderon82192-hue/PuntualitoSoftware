@@ -915,13 +915,7 @@ export default function AdminHistory() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center justify-end space-x-2">
-                                <button
-                                  onClick={() => { setAttendanceToEdit(a); setShowEditModal(true); }}
-                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                  title="Editar"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </button>
+
                                 <button
                                   onClick={() => handleDeleteAttendance(a.id)}
                                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
@@ -1008,13 +1002,6 @@ export default function AdminHistory() {
                                     <ImageIcon className="w-4 h-4" />
                                   </a>
                                 )}
-                                <button
-                                  onClick={() => { setAttendanceToEdit(a); setShowEditModal(true); }}
-                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                  title="Editar"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </button>
                                 <button
                                   onClick={() => handleDeleteAttendance(a.id)}
                                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
