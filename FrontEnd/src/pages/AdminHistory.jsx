@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2 } from 'lucide-react';
+import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2, Award } from 'lucide-react';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
@@ -33,7 +33,9 @@ export default function AdminHistory() {
   const [reportData, setReportData] = useState([]);
   const [loadingReport, setLoadingReport] = useState(true);
   const reportRef = useRef(null);
+  const reportPuntualesRef = useRef(null);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isExportingPDFPuntuales, setIsExportingPDFPuntuales] = useState(false);
 
   const loadFiltersData = async () => {
     try {
@@ -307,6 +309,33 @@ export default function AdminHistory() {
     }
   };
 
+  const handleExportPDFPuntuales = async () => {
+    if (!reportPuntualesRef.current) return;
+    setIsExportingPDFPuntuales(true);
+    try {
+      const element = reportPuntualesRef.current;
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('l', 'mm', 'a4'); // Apaisado (landscape)
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Ranking_Puntualidad_${dayjs().format('YYYYMMDD')}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF Puntualidad', error);
+      alert('Hubo un error al generar el PDF.');
+    } finally {
+      setIsExportingPDFPuntuales(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -363,6 +392,16 @@ export default function AdminHistory() {
             <BarChart2 className="w-4 h-4" />
             <span className="hidden sm:inline">Reportes de Tardanzas</span>
             <span className="sm:hidden">Reportes</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('puntuales')}
+            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'puntuales' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Award className="w-4 h-4 text-emerald-500" />
+            <span className="hidden sm:inline">Top Puntuales</span>
+            <span className="sm:hidden">Top Puntuales</span>
           </button>
         </div>
 
@@ -454,7 +493,7 @@ export default function AdminHistory() {
 
             <div ref={reportRef} className="space-y-6 bg-slate-50 p-4 rounded-2xl">
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 {/* Gráfico Animado en Tiempo Real (Reporte de Tardanzas) */}
                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
                   <div className="flex items-center justify-between mb-4">
@@ -501,57 +540,6 @@ export default function AdminHistory() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
                         No hay registros de llegadas tarde.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Ranking de Puntualidad */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-bold text-slate-800">Top 5: Empleados Más Puntuales</h3>
-                    <p className="text-sm text-slate-500">Por promedio de hora de llegada (Filtrado)</p>
-                  </div>
-                  
-                  <div className="flex-1 min-h-[250px] w-full">
-                    {topPuntuales.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={topPuntuales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fontSize: 12, fill: '#64748b' }}
-                            domain={['dataMin - 30', 'dataMax + 30']}
-                            tickFormatter={(val) => {
-                              const hh = Math.floor(val / 60);
-                              const mm = val % 60;
-                              return `${(hh % 12 || 12)}:${mm.toString().padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
-                            }}
-                          />
-                          <Tooltip 
-                            cursor={{ fill: '#f8fafc' }}
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                            formatter={(value, name, props) => {
-                              return [props.payload.avgTimeFormatted, 'Promedio de Llegada'];
-                            }}
-                          />
-                          <Bar 
-                            dataKey="avgMins" 
-                            name="Promedio"
-                            radius={[6, 6, 0, 0]}
-                            animationDuration={1500}
-                          >
-                            {topPuntuales.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill="#10b981" />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
-                        No hay suficientes datos para el ranking.
                       </div>
                     )}
                   </div>
@@ -641,6 +629,78 @@ export default function AdminHistory() {
                 </table>
               </div>
             </div>
+            </div>
+          </div>
+        ) : activeTab === 'puntuales' ? (
+          <div className="space-y-6">
+            <div className="flex justify-end">
+              <button 
+                onClick={handleExportPDFPuntuales}
+                disabled={isExportingPDFPuntuales}
+                className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm font-medium disabled:opacity-50"
+              >
+                <Download className="w-5 h-5" />
+                <span>{isExportingPDFPuntuales ? 'Generando PDF...' : 'Descargar Ranking PDF'}</span>
+              </button>
+            </div>
+
+            <div ref={reportPuntualesRef} className="bg-slate-50 p-4 rounded-2xl">
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                <div className="mb-4 flex items-center space-x-3">
+                  <div className="bg-emerald-100 p-2 rounded-xl">
+                    <Award className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-800">Top 5: Empleados Más Puntuales</h3>
+                    <p className="text-sm text-slate-500">Por promedio de hora de llegada en la mañana (Filtrado)</p>
+                  </div>
+                </div>
+                
+                <div className="w-full h-[400px] mt-4">
+                  {topPuntuales.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topPuntuales} margin={{ top: 20, right: 30, left: 20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 13, fill: '#64748b' }} />
+                        <YAxis 
+                          width={80}
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 13, fill: '#64748b' }}
+                          domain={['dataMin - 30', 'dataMax + 30']}
+                          tickFormatter={(val) => {
+                            const hh = Math.floor(val / 60);
+                            const mm = Math.round(val % 60);
+                            return `${(hh % 12 || 12)}:${mm.toString().padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
+                          }}
+                        />
+                        <Tooltip 
+                          cursor={{ fill: '#f8fafc' }}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          formatter={(value, name, props) => {
+                            return [props.payload.avgTimeFormatted, 'Promedio de Llegada'];
+                          }}
+                        />
+                        <Bar 
+                          dataKey="avgMins" 
+                          name="Promedio"
+                          radius={[6, 6, 0, 0]}
+                          animationDuration={1500}
+                          barSize={60}
+                        >
+                          {topPuntuales.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill="#10b981" />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic border-2 border-dashed border-slate-100 rounded-xl">
+                      No hay suficientes datos para el ranking.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ) : (
