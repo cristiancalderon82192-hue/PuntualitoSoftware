@@ -108,7 +108,7 @@ const checkIn = async (req, res) => {
       Number(latitud), Number(longitud)
     );
 
-    if (distancia > sede.radioPermitido) {
+    if (action !== 'SALIDA' && distancia > sede.radioPermitido) {
       return res.status(403).json({ 
         error: `Estás a ${Math.round(distancia)} metros de la sede. El máximo permitido es ${sede.radioPermitido} metros.` 
       });
