@@ -4,6 +4,9 @@ import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { useRef } from 'react';
 
 export default function AdminHistory() {
   const [attendances, setAttendances] = useState([]);
@@ -29,6 +32,8 @@ export default function AdminHistory() {
   // Report State
   const [reportData, setReportData] = useState([]);
   const [loadingReport, setLoadingReport] = useState(true);
+  const reportRef = useRef(null);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
 
   const loadFiltersData = async () => {
     try {
@@ -140,7 +145,48 @@ export default function AdminHistory() {
     return Object.values(grouped).sort((a, b) => b.diasAsistidos - a.diasAsistidos);
   };
 
+  const getTopPuntuales = () => {
+    const userTimes = {};
+    
+    filteredAttendances.forEach(a => {
+      if (!a.horaEntrada || a.estado.nombre === 'AUSENTE') return;
+      
+      const entryTime = dayjs(a.horaEntrada);
+      const minutesFromMidnight = entryTime.hour() * 60 + entryTime.minute();
+      
+      if (!userTimes[a.usuarioId]) {
+        userTimes[a.usuarioId] = {
+          name: `${a.usuario.nombre.split(' ')[0]} ${a.usuario.apellido.split(' ')[0]}`,
+          totalMinutes: 0,
+          count: 0
+        };
+      }
+      
+      userTimes[a.usuarioId].totalMinutes += minutesFromMidnight;
+      userTimes[a.usuarioId].count += 1;
+    });
+    
+    const averaged = Object.values(userTimes).map(u => {
+      const avgMins = Math.round(u.totalMinutes / u.count);
+      const hh = Math.floor(avgMins / 60);
+      const mm = avgMins % 60;
+      const isPM = hh >= 12;
+      const displayH = hh % 12 === 0 ? 12 : hh % 12;
+      const formattedTime = `${displayH.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
+      
+      return {
+        name: u.name,
+        avgMins: avgMins,
+        avgTimeFormatted: formattedTime
+      };
+    });
+    
+    // Sort by lowest avgMins (earliest arrivals)
+    return averaged.sort((a, b) => a.avgMins - b.avgMins).slice(0, 5);
+  };
+
   const consolidatedData = getConsolidatedData();
+  const topPuntuales = getTopPuntuales();
 
   const handleViewDetails = (usuarioId) => {
     setSelectedEmployeeDetails(usuarioId);
@@ -197,8 +243,10 @@ export default function AdminHistory() {
       'Sede': a.sede.nombre,
       'Estado (Día)': a.estado.nombre,
       'Tarde de Almuerzo': a.tardeAlmuerzo ? 'SÍ' : 'NO',
-      'Observaciones (Mañana)': a.observaciones || 'N/A',
-      'Observaciones (Almuerzo)': a.observacionesAlmuerzo || 'N/A'
+      'Causa Tardanza (Mañana)': a.causaTardanza || 'N/A',
+      'Justificación (Mañana)': a.observaciones || 'N/A',
+      'Causa Tardanza (Almuerzo)': a.causaTardanzaAlmuerzo || 'N/A',
+      'Justificación (Almuerzo)': a.observacionesAlmuerzo || 'N/A'
     }));
 
     // Preparar datos para Excel Consolidado
@@ -229,6 +277,33 @@ export default function AdminHistory() {
     // Descargar
     const fileName = `Reporte_Asistencia_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`;
     XLSX.writeFile(workbook, fileName);
+  };
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    setIsExportingPDF(true);
+    try {
+      const element = reportRef.current;
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Reporte_Tardanzas_${dayjs().format('YYYYMMDD')}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF', error);
+      alert('Hubo un error al generar el PDF.');
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   return (
@@ -364,56 +439,124 @@ export default function AdminHistory() {
         {/* Contenido Principal */}
         {activeTab === 'reportes' ? (
           <div className="space-y-6">
-            {/* Gráfico Animado en Tiempo Real (Reporte) */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">Causas de Llegadas Tarde (Global)</h3>
-                  <p className="text-sm text-slate-500">Actualización en tiempo real (Polling cada 10s)</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-xs font-medium text-emerald-600">En Vivo</span>
-                </div>
-              </div>
-              
-              <div className="h-64 w-full">
-                {loadingReport ? (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="w-8 h-8 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin"></div>
-                  </div>
-                ) : reportData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={reportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
-                      <Tooltip 
-                        cursor={{ fill: '#f8fafc' }}
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Bar 
-                        dataKey="count" 
-                        name="Nº de Casos"
-                        radius={[6, 6, 0, 0]}
-                        animationDuration={1500}
-                      >
-                        {reportData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#3b82f6'} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
-                    No hay registros de llegadas tarde con causa registrada.
-                  </div>
-                )}
-              </div>
+            
+            <div className="flex justify-end">
+              <button 
+                onClick={handleExportPDF}
+                disabled={isExportingPDF}
+                className="flex items-center justify-center space-x-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 transition-colors shadow-sm font-medium disabled:opacity-50"
+              >
+                <Download className="w-5 h-5" />
+                <span>{isExportingPDF ? 'Generando PDF...' : 'Descargar Reporte PDF'}</span>
+              </button>
             </div>
+
+            <div ref={reportRef} className="space-y-6 bg-slate-50 p-4 rounded-2xl">
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Gráfico Animado en Tiempo Real (Reporte de Tardanzas) */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800">Causas de Llegadas Tarde</h3>
+                      <p className="text-sm text-slate-500">Global (Polling cada 10s)</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-xs font-medium text-emerald-600">En Vivo</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 min-h-[250px] w-full">
+                    {loadingReport ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin"></div>
+                      </div>
+                    ) : reportData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={reportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
+                          <Tooltip 
+                            cursor={{ fill: '#f8fafc' }}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          />
+                          <Bar 
+                            dataKey="count" 
+                            name="Nº de Casos"
+                            radius={[6, 6, 0, 0]}
+                            animationDuration={1500}
+                          >
+                            {reportData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#3b82f6'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
+                        No hay registros de llegadas tarde.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ranking de Puntualidad */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Top 5: Empleados Más Puntuales</h3>
+                    <p className="text-sm text-slate-500">Por promedio de hora de llegada (Filtrado)</p>
+                  </div>
+                  
+                  <div className="flex-1 min-h-[250px] w-full">
+                    {topPuntuales.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topPuntuales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                          <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 12, fill: '#64748b' }}
+                            domain={['dataMin - 30', 'dataMax + 30']}
+                            tickFormatter={(val) => {
+                              const hh = Math.floor(val / 60);
+                              const mm = val % 60;
+                              return `${(hh % 12 || 12)}:${mm.toString().padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
+                            }}
+                          />
+                          <Tooltip 
+                            cursor={{ fill: '#f8fafc' }}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            formatter={(value, name, props) => {
+                              return [props.payload.avgTimeFormatted, 'Promedio de Llegada'];
+                            }}
+                          />
+                          <Bar 
+                            dataKey="avgMins" 
+                            name="Promedio"
+                            radius={[6, 6, 0, 0]}
+                            animationDuration={1500}
+                          >
+                            {topPuntuales.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill="#10b981" />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm italic">
+                        No hay suficientes datos para el ranking.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
 
             {/* Tabla Detallada de Tardanzas Filtrada */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -496,6 +639,7 @@ export default function AdminHistory() {
                   </tbody>
                 </table>
               </div>
+            </div>
             </div>
           </div>
         ) : (
