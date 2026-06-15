@@ -134,7 +134,7 @@ const getAttendances = async (req, res) => {
     const asistencias = await prisma.asistencia.findMany({
       where: whereClause,
       include: {
-        usuario: { select: { nombre: true, apellido: true, documento: true, horaFinAlmuerzo: true } },
+        usuario: { select: { nombre: true, apellido: true, documento: true, horaFinAlmuerzo: true, horario: { select: { horaInicio: true } } } },
         sede: { select: { nombre: true } },
         estado: { select: { nombre: true } }
       },

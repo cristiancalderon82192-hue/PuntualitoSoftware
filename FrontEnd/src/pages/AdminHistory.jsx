@@ -163,10 +163,25 @@ export default function AdminHistory() {
     const userTimes = {};
     
     filteredAttendances.forEach(a => {
-      if (!a.horaEntrada || a.estado.nombre === 'AUSENTE') return;
+      if (a.estado.nombre === 'VACACIONES') return; // Ignorar vacaciones para no alterar el promedio
       
-      const entryTime = dayjs(a.horaEntrada);
-      const minutesFromMidnight = entryTime.hour() * 60 + entryTime.minute();
+      let minutesFromMidnight = 0;
+      
+      if (!a.horaEntrada || a.estado.nombre === 'AUSENTE') {
+        // Asumimos AUSENTE
+        // Sumar 7.5 horas del día laboral, o 4.5 horas si es sábado
+        const horaInicioStr = a.usuario?.horario?.horaInicio || '08:00:00';
+        const [h, m] = horaInicioStr.split(':').map(Number);
+        const shiftStartMins = h * 60 + (m || 0);
+        
+        const isSaturday = dayjs(a.fecha).day() === 6; // 6 es Sábado
+        const penaltyMins = isSaturday ? 270 : 450; // 4.5h o 7.5h
+        
+        minutesFromMidnight = shiftStartMins + penaltyMins;
+      } else {
+        const entryTime = dayjs(a.horaEntrada);
+        minutesFromMidnight = entryTime.hour() * 60 + entryTime.minute();
+      }
       
       if (!userTimes[a.usuarioId]) {
         userTimes[a.usuarioId] = {
