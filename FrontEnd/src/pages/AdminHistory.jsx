@@ -100,19 +100,8 @@ export default function AdminHistory() {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  const isLateLunch = (a) => {
-    if (!a.horaEntradaAlmuerzo || !a.usuario.horaFinAlmuerzo) return false;
-    const returnTimeStr = dayjs(a.horaEntradaAlmuerzo).format('HH:mm:ss');
-    const limitTimeStr = a.usuario.horaFinAlmuerzo.length === 5 ? `${a.usuario.horaFinAlmuerzo}:00` : a.usuario.horaFinAlmuerzo;
-    return returnTimeStr > limitTimeStr;
-  };
-
-  const processedAttendances = attendances.map(a => ({
-    ...a,
-    tardeAlmuerzo: isLateLunch(a)
-  }));
-
-  const filteredAttendances = processedAttendances.filter(a => activeTab === 'tarde_almuerzo' ? a.tardeAlmuerzo : true);
+  const processedAttendances = attendances;
+  const filteredAttendances = processedAttendances;
 
   const formatMinutes = (mins) => {
     if (!mins) return '0m';
@@ -131,7 +120,6 @@ export default function AdminHistory() {
           sede: a.sede,
           diasAsistidos: 0,
           llegadasTarde: 0,
-          tardesAlmuerzo: 0,
           faltas: 0,
           vacaciones: 0,
           totalMinutosExtra: 0,
@@ -150,7 +138,6 @@ export default function AdminHistory() {
       }
 
       if (a.estado.nombre === 'TARDE') grouped[a.usuarioId].llegadasTarde++;
-      if (a.tardeAlmuerzo) grouped[a.usuarioId].tardesAlmuerzo++;
       if (a.minutosExtraAprobados) grouped[a.usuarioId].totalMinutosExtra += a.minutosExtraAprobados;
       if (a.minutosTarde) grouped[a.usuarioId].totalMinutosTarde += a.minutosTarde;
     });
@@ -277,7 +264,9 @@ export default function AdminHistory() {
         'Empleado': `${a.usuario.nombre} ${a.usuario.apellido}`,
         'Sede': a.sede.nombre,
         'Estado (Día)': a.estado.nombre,
-        'Tarde de Almuerzo': a.tardeAlmuerzo ? 'SÍ' : 'NO',
+        'Hora Inicio Almuerzo': a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
+        'Hora Fin Almuerzo': a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
+        'Minutos Tarde': formatMinutes(a.minutosTarde),
         'Causa Tardanza (Mañana)': a.causaTardanza || 'N/A',
         'Justificación (Mañana)': a.observaciones || 'N/A',
         'Causa Tardanza (Almuerzo)': a.causaTardanzaAlmuerzo || 'N/A',
@@ -295,7 +284,6 @@ export default function AdminHistory() {
           'Llegadas Tarde': c.llegadasTarde,
           'Faltas': c.faltas,
           'Vacaciones': c.vacaciones,
-          'Tardes de Almuerzo': c.tardesAlmuerzo,
           'Hrs Extras': formatMinutes(c.totalMinutosExtra),
           'Hrs Tardanzas': formatMinutes(c.totalMinutosTarde),
           'Balance': balance === 0 ? '0m' : balance > 0 ? `+ ${formatMinutes(balance)}` : `- ${formatMinutes(Math.abs(balance))}`
@@ -610,13 +598,12 @@ export default function AdminHistory() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE' || a.tardeAlmuerzo).map((a) => (
+                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE').map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
                           <div className="flex flex-col space-y-1 mt-1">
                             {a.estado.nombre === 'TARDE' && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 w-fit">Entrada: {dayjs(a.horaEntrada).format('hh:mm A')}</span>}
-                            {a.tardeAlmuerzo && <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 w-fit">Almuerzo: {dayjs(a.horaEntradaAlmuerzo).format('hh:mm A')}</span>}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -634,14 +621,6 @@ export default function AdminHistory() {
                               <p className="font-bold text-slate-800">{a.causaTardanza || 'Causa no especificada (Sistema Anterior)'}</p>
                               <p className="text-slate-600 mt-1 italic text-xs border-l-2 border-slate-300 pl-2">
                                 {a.observaciones || 'Sin justificación escrita'}
-                              </p>
-                            </div>
-                          )}
-                          {a.tardeAlmuerzo && (
-                            <div>
-                              <p className="font-bold text-slate-800">{a.causaTardanzaAlmuerzo || 'Causa no especificada (Sistema Anterior)'}</p>
-                              <p className="text-slate-600 mt-1 italic text-xs border-l-2 border-slate-300 pl-2">
-                                {a.observacionesAlmuerzo || 'Sin justificación escrita'}
                               </p>
                             </div>
                           )}
@@ -663,7 +642,7 @@ export default function AdminHistory() {
                         </td>
                       </tr>
                     ))}
-                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE' || a.tardeAlmuerzo).length === 0 && (
+                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE').length === 0 && (
                       <tr>
                         <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
                           No se encontraron llegadas tarde en el periodo seleccionado.

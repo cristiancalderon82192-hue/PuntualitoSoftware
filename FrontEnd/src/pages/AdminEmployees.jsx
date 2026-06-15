@@ -24,9 +24,8 @@ export default function AdminEmployees() {
     contrasena: '',
     rolId: '',
     sedeId: '',
+    sedeId: '',
     horarioId: '',
-    horaInicioAlmuerzo: '',
-    horaFinAlmuerzo: '',
     activo: true,
     rostroDescriptor: '',
     enVacaciones: false,
@@ -67,8 +66,6 @@ export default function AdminEmployees() {
         rolId: employee.rolId,
         sedeId: employee.sedeId,
         horarioId: employee.horarioId,
-        horaInicioAlmuerzo: employee.horaInicioAlmuerzo || '',
-        horaFinAlmuerzo: employee.horaFinAlmuerzo || '',
         activo: employee.activo,
         rostroDescriptor: employee.rostroDescriptor || '',
         enVacaciones: employee.enVacaciones || false,
@@ -86,8 +83,6 @@ export default function AdminEmployees() {
         rolId: formData.roles[0]?.id || '',
         sedeId: formData.sedes[0]?.id || '',
         horarioId: formData.horarios[0]?.id || '',
-        horaInicioAlmuerzo: '',
-        horaFinAlmuerzo: '',
         activo: true,
         rostroDescriptor: '',
         enVacaciones: false,
@@ -354,26 +349,6 @@ export default function AdminEmployees() {
                     >
                       {formData.horarios.map(h => <option key={h.id} value={h.id}>{h.nombre}</option>)}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Hora Inicio Almuerzo (Opcional)</label>
-                    <input
-                      type="time" step="2"
-                      value={formValues.horaInicioAlmuerzo}
-                      onChange={e => setFormValues({ ...formValues, horaInicioAlmuerzo: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Hora Fin Almuerzo (Opcional)</label>
-                    <input
-                      type="time"
-                      value={formValues.horaFinAlmuerzo}
-                      onChange={e => setFormValues({ ...formValues, horaFinAlmuerzo: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
-                    />
                   </div>
 
                   <div className="col-span-1 md:col-span-2 flex flex-col mt-2 space-y-4">

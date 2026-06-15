@@ -33,7 +33,7 @@ const getAttendanceStatus = async (req, res) => {
       orderBy: { nombre: 'asc' }
     });
 
-    const tieneAlmuerzo = !!usuario?.horaInicioAlmuerzo;
+    const tieneAlmuerzo = true; // El almuerzo está disponible para todos
     const infoSede = usuario?.sede ? { 
       latitud: usuario.sede.latitud, 
       longitud: usuario.sede.longitud, 
@@ -41,8 +41,8 @@ const getAttendanceStatus = async (req, res) => {
     } : null;
 
     const timeLimits = {
-      horaInicioAlmuerzo: usuario?.horaInicioAlmuerzo,
-      horaFinAlmuerzo: usuario?.horaFinAlmuerzo,
+      horaInicioAlmuerzo: null,
+      horaFinAlmuerzo: null,
       horaFinJornada: usuario?.horario?.horaFin
     };
 
@@ -57,16 +57,7 @@ const getAttendanceStatus = async (req, res) => {
     const requireJustification = asistencia?.estado?.nombre === 'TARDE' && !asistencia.observaciones && !asistencia.evidenciaUrl;
     const yaAlmorzo = !!asistencia?.horaSalidaAlmuerzo;
     
-    let requireLunchJustification = false;
-    if (asistencia?.horaEntradaAlmuerzo && usuario?.horaFinAlmuerzo) {
-      const limitTimeStr = usuario.horaFinAlmuerzo.length === 5 ? `${usuario.horaFinAlmuerzo}:00` : usuario.horaFinAlmuerzo;
-      const today = dayjs(asistencia.fecha).format('YYYY-MM-DD');
-      const limitObj = dayjs(`${today}T${limitTimeStr}`);
-      const returnObj = dayjs(asistencia.horaEntradaAlmuerzo);
-      if (returnObj.diff(limitObj, 'minute') > 0 && !asistencia.observacionesAlmuerzo && !asistencia.evidenciaAlmuerzoUrl) {
-        requireLunchJustification = true;
-      }
-    }
+    let requireLunchJustification = false; // Ya no se calcula la tardanza del almuerzo
 
     if (asistencia.horaSalida) {
       return res.json({ status: 'JORNADA_FINALIZADA', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, requireJustification, requireLunchJustification, yaAlmorzo, causasTardanza });
@@ -176,25 +167,12 @@ const checkIn = async (req, res) => {
       if (!asistenciaExistente.horaSalidaAlmuerzo) return res.status(400).json({ error: 'No has registrado tu salida a almorzar' });
       if (asistenciaExistente.horaEntradaAlmuerzo) return res.status(400).json({ error: 'Ya regresaste de almorzar' });
       
-      let minutosTardeAlmuerzo = 0;
-      if (usuario.horaFinAlmuerzo) {
-        const horaActual = dayjs().tz();
-        const limiteArr = usuario.horaFinAlmuerzo.split(':');
-        const limiteObj = dayjs().tz().hour(parseInt(limiteArr[0])).minute(parseInt(limiteArr[1])).second(parseInt(limiteArr[2] || 0));
-        
-        const diffMinutes = horaActual.diff(limiteObj, 'minute');
-        if (diffMinutes > 0) {
-          minutosTardeAlmuerzo = diffMinutes;
-        }
-      }
-
       const asistenciaActualizada = await prisma.asistencia.update({
         where: { id: asistenciaExistente.id },
         data: { 
           horaEntradaAlmuerzo: new Date(), 
           latitudEntradaAlmuerzo: latitud, 
-          longitudEntradaAlmuerzo: longitud,
-          minutosTarde: (asistenciaExistente.minutosTarde || 0) + minutosTardeAlmuerzo
+          longitudEntradaAlmuerzo: longitud
         }
       });
       return res.json({ 
