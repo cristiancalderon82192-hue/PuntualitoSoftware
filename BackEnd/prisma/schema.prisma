@@ -132,9 +132,11 @@ model Asistencia {
   latitudSalida   Decimal?  @db.Decimal(10, 8)
   longitudSalida  Decimal?  @db.Decimal(11, 8)
 
+  causaTardanza   String?
   observaciones   String?   @db.Text
   evidenciaUrl    String?   @db.Text
 
+  causaTardanzaAlmuerzo   String?
   observacionesAlmuerzo   String?   @db.Text
   evidenciaAlmuerzoUrl    String?   @db.Text
 

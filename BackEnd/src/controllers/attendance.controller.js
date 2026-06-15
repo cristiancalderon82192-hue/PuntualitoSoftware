@@ -245,18 +245,20 @@ const checkIn = async (req, res) => {
 const justifyAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const { observaciones, tipo } = req.body;
+    const { observaciones, causa, tipo } = req.body;
     const evidenciaUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-    if (!observaciones && !evidenciaUrl) {
-      return res.status(400).json({ error: 'Debes enviar una observación o una imagen como evidencia' });
+    if (!observaciones) {
+      return res.status(400).json({ error: 'Debes enviar una observación obligatoria' });
     }
 
     const dataToUpdate = {};
     if (tipo === 'ALMUERZO') {
+      if (causa) dataToUpdate.causaTardanzaAlmuerzo = causa;
       if (observaciones) dataToUpdate.observacionesAlmuerzo = observaciones;
       if (evidenciaUrl) dataToUpdate.evidenciaAlmuerzoUrl = evidenciaUrl;
     } else {
+      if (causa) dataToUpdate.causaTardanza = causa;
       if (observaciones) dataToUpdate.observaciones = observaciones;
       if (evidenciaUrl) dataToUpdate.evidenciaUrl = evidenciaUrl;
     }

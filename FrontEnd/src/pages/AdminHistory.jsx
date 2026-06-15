@@ -425,19 +425,22 @@ export default function AdminHistory() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      <th className="px-6 py-4">Fecha</th>
+                      <th className="px-6 py-4">Fecha / Tipo</th>
                       <th className="px-6 py-4">Empleado</th>
-                      <th className="px-6 py-4 text-center">Minutos Tarde</th>
-                      <th className="px-6 py-4">Causa / Justificación</th>
+                      <th className="px-6 py-4 text-center">Minutos Tarde (Total)</th>
+                      <th className="px-6 py-4">Causas y Justificaciones</th>
                       <th className="px-6 py-4 text-center">Evidencia</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE').map((a) => (
+                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE' || a.tardeAlmuerzo).map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
-                          <p className="text-xs text-slate-500">Llegó a las: {dayjs(a.horaEntrada).format('hh:mm A')}</p>
+                          <div className="flex flex-col space-y-1 mt-1">
+                            {a.estado.nombre === 'TARDE' && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 w-fit">Entrada: {dayjs(a.horaEntrada).format('hh:mm A')}</span>}
+                            {a.tardeAlmuerzo && <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 w-fit">Almuerzo: {dayjs(a.horaEntradaAlmuerzo).format('hh:mm A')}</span>}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <p className="font-medium text-slate-800">{a.usuario.nombre} {a.usuario.apellido}</p>
@@ -449,10 +452,21 @@ export default function AdminHistory() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 max-w-md">
-                          {a.observaciones ? (
-                            <span className="font-medium">{a.observaciones}</span>
-                          ) : (
-                            <span className="text-slate-400 italic">Sin justificación</span>
+                          {a.estado.nombre === 'TARDE' && (
+                            <div className="mb-2">
+                              <p className="font-bold text-slate-800">{a.causaTardanza || 'Causa no especificada (Sistema Anterior)'}</p>
+                              <p className="text-slate-600 mt-1 italic text-xs border-l-2 border-slate-300 pl-2">
+                                {a.observaciones || 'Sin justificación escrita'}
+                              </p>
+                            </div>
+                          )}
+                          {a.tardeAlmuerzo && (
+                            <div>
+                              <p className="font-bold text-slate-800">{a.causaTardanzaAlmuerzo || 'Causa no especificada (Sistema Anterior)'}</p>
+                              <p className="text-slate-600 mt-1 italic text-xs border-l-2 border-slate-300 pl-2">
+                                {a.observacionesAlmuerzo || 'Sin justificación escrita'}
+                              </p>
+                            </div>
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
@@ -472,7 +486,7 @@ export default function AdminHistory() {
                         </td>
                       </tr>
                     ))}
-                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE').length === 0 && (
+                    {processedAttendances.filter(a => a.estado.nombre === 'TARDE' || a.tardeAlmuerzo).length === 0 && (
                       <tr>
                         <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
                           No se encontraron llegadas tarde en el periodo seleccionado.

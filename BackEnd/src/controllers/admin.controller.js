@@ -336,26 +336,24 @@ const getLateArrivalsReport = async (req, res) => {
 
     const tardanzas = await prisma.asistencia.findMany({
       where: {
-        estado: { nombre: 'TARDE' },
-        observaciones: { not: null, not: '' }
+        OR: [
+          { causaTardanza: { not: null } },
+          { causaTardanzaAlmuerzo: { not: null } }
+        ]
       },
-      select: { observaciones: true }
+      select: { causaTardanza: true, causaTardanzaAlmuerzo: true }
     });
 
     tardanzas.forEach(t => {
-      let matched = false;
-      for (const causa of causas) {
-        if (t.observaciones.startsWith(causa.nombre)) {
-          const reportItem = reportData.find(item => item.name === causa.nombre);
-          if (reportItem) {
-            reportItem.count += 1;
-          }
-          matched = true;
-          break;
-        }
+      if (t.causaTardanza) {
+        const reportItem = reportData.find(item => item.name === t.causaTardanza);
+        if (reportItem) reportItem.count += 1;
+        else otrosCount += 1;
       }
-      if (!matched) {
-        otrosCount += 1;
+      if (t.causaTardanzaAlmuerzo) {
+        const reportItem = reportData.find(item => item.name === t.causaTardanzaAlmuerzo);
+        if (reportItem) reportItem.count += 1;
+        else otrosCount += 1;
       }
     });
 

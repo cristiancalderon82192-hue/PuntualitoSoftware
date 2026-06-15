@@ -148,17 +148,16 @@ export default function Dashboard() {
       alert('Debes seleccionar una causa de tardanza');
       return;
     }
-    if (causaSeleccionada === 'OTRO' && !observaciones.trim()) {
-      alert('Por favor especifica el motivo en las observaciones');
+    if (!observaciones.trim()) {
+      alert('Por favor escribe una justificación u observación obligatoria');
       return;
     }
-
-    const textoFinal = causaSeleccionada === 'OTRO' ? observaciones : (observaciones ? `${causaSeleccionada}: ${observaciones}` : causaSeleccionada);
 
     setIsSubmittingJustification(true);
     try {
       const formData = new FormData();
-      formData.append('observaciones', textoFinal);
+      formData.append('observaciones', observaciones);
+      formData.append('causa', causaSeleccionada);
       formData.append('tipo', justifyType);
 
       await api.patch(`/attendance/${asistenciaId}/justify`, formData, {
@@ -422,12 +421,13 @@ export default function Dashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones Adicionales {causaSeleccionada === 'OTRO' && <span className="text-red-500">*</span>}</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Observaciones / Justificación Detallada <span className="text-red-500">*</span></label>
                     <textarea 
                       value={observaciones}
                       onChange={e => setObservaciones(e.target.value)}
+                      required
                       className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none resize-none h-20 text-sm"
-                      placeholder="Detalles opcionales..."
+                      placeholder="Debes explicar de forma obligatoria qué pasó..."
                     ></textarea>
                   </div>
                 </form>
@@ -437,7 +437,7 @@ export default function Dashboard() {
                 <button 
                   type="submit"
                   form="justify-form"
-                  disabled={isSubmittingJustification || !causaSeleccionada || (causaSeleccionada === 'OTRO' && !observaciones.trim())}
+                  disabled={isSubmittingJustification || !causaSeleccionada || !observaciones.trim()}
                   className="flex-1 bg-amber-500 text-white font-medium py-2.5 rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {isSubmittingJustification ? (
