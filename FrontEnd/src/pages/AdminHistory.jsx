@@ -859,6 +859,7 @@ export default function AdminHistory() {
                         <th className="px-6 py-4">Salida Almuerzo</th>
                         <th className="px-6 py-4">Regreso Almuerzo</th>
                         <th className="px-6 py-4 text-center">Tiempo Tomado</th>
+                        <th className="px-6 py-4 text-right">Acciones</th>
                       </>
                     ) : (
                       <>
@@ -866,7 +867,7 @@ export default function AdminHistory() {
                         <th className="px-6 py-4">Horas Extras</th>
                         <th className="px-6 py-4">Estado</th>
                         <th className="px-6 py-4">Observaciones</th>
-                        <th className="px-6 py-4">Acciones</th>
+                        <th className="px-6 py-4 text-right">Acciones</th>
                       </>
                     )}
                   </tr>
@@ -911,6 +912,24 @@ export default function AdminHistory() {
                               })() : (
                                 <span className="text-xs text-slate-400 italic">{a.horaSalidaAlmuerzo ? 'En almuerzo...' : 'Sin registrar'}</span>
                               )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  onClick={() => { setAttendanceToEdit(a); setShowEditModal(true); }}
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAttendance(a.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </>
                         ) : (
@@ -997,7 +1016,7 @@ export default function AdminHistory() {
                                   <Edit className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handleDelete(a.id)}
+                                  onClick={() => handleDeleteAttendance(a.id)}
                                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                   title="Eliminar"
                                 >
