@@ -76,50 +76,11 @@ export default function AdminDashboard() {
           <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100">{error}</div>
         ) : (
           <>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
-              <StatCard 
-                title="Total Empleados" 
-                value={stats.estadisticas.totalEmpleados} 
-                icon={Users} 
-                colorClass="bg-blue-500"
-                delay={0.1}
-              />
-              <StatCard 
-                title="Llegaron Puntual" 
-                value={stats.estadisticas.puntuales} 
-                icon={CheckCircle} 
-                colorClass="bg-emerald-500"
-                delay={0.2}
-              />
-              <StatCard 
-                title="Llegaron Tarde" 
-                value={stats.estadisticas.tardes} 
-                icon={Clock} 
-                colorClass="bg-amber-500"
-                delay={0.3}
-              />
-              <StatCard 
-                title="En Almuerzo" 
-                value={stats.estadisticas.enAlmuerzo} 
-                icon={Coffee} 
-                colorClass="bg-purple-500"
-                delay={0.4}
-              />
-              <StatCard 
-                title="Ausentes (Aún no llegan)" 
-                value={stats.estadisticas.ausentes} 
-                icon={XCircle} 
-                colorClass="bg-rose-500"
-                delay={0.5}
-              />
-            </div>
-
             {/* Sedes Map Section */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-10"
             >
               <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
@@ -171,11 +132,50 @@ export default function AdminDashboard() {
               </div>
             </motion.div>
 
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+              <StatCard 
+                title="Total Empleados" 
+                value={stats.estadisticas.totalEmpleados} 
+                icon={Users} 
+                colorClass="bg-blue-500"
+                delay={0.2}
+              />
+              <StatCard 
+                title="Llegaron Puntual" 
+                value={stats.estadisticas.puntuales} 
+                icon={CheckCircle} 
+                colorClass="bg-emerald-500"
+                delay={0.3}
+              />
+              <StatCard 
+                title="Llegaron Tarde" 
+                value={stats.estadisticas.tardes} 
+                icon={Clock} 
+                colorClass="bg-amber-500"
+                delay={0.4}
+              />
+              <StatCard 
+                title="En Almuerzo" 
+                value={stats.estadisticas.enAlmuerzo} 
+                icon={Coffee} 
+                colorClass="bg-purple-500"
+                delay={0.5}
+              />
+              <StatCard 
+                title="Ausentes (Aún no llegan)" 
+                value={stats.estadisticas.ausentes} 
+                icon={XCircle} 
+                colorClass="bg-rose-500"
+                delay={0.6}
+              />
+            </div>
+
             {/* Recent Attendances Table */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
               className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
             >
               <div className="px-6 py-5 border-b border-slate-100">
@@ -246,7 +246,7 @@ export default function AdminDashboard() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.7 }}
+                transition={{ duration: 0.5, delay: 0.8 }}
                 className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-6"
               >
                 <div className="px-6 py-5 border-b border-slate-100">
