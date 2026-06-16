@@ -1,8 +1,19 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Users, CheckCircle, Clock, XCircle, Coffee } from 'lucide-react';
+import { Users, CheckCircle, Clock, XCircle, Coffee, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import dayjs from 'dayjs';
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix para los íconos de Leaflet en React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 const StatCard = ({ title, value, icon: Icon, colorClass, delay }) => (
   <motion.div 
@@ -220,6 +231,62 @@ export default function AdminDashboard() {
                 </div>
               </motion.div>
             )}
+
+            {/* Sedes Map Section */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-6"
+            >
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800">Mapa de Sedes</h3>
+                </div>
+              </div>
+              
+              <div className="h-96 w-full relative z-0">
+                {stats.sedes && stats.sedes.length > 0 ? (
+                  <MapContainer 
+                    center={[Number(stats.sedes[0].latitud), Number(stats.sedes[0].longitud)]} 
+                    zoom={12} 
+                    style={{ height: '100%', width: '100%', zIndex: 0 }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {stats.sedes.map((sede) => (
+                      <div key={sede.id}>
+                        <Marker 
+                          position={[Number(sede.latitud), Number(sede.longitud)]}
+                        >
+                          <Popup>
+                            <div className="text-center">
+                              <h4 className="font-bold text-slate-800">{sede.nombre}</h4>
+                              {sede.direccion && <p className="text-xs text-slate-500 mt-1">{sede.direccion}</p>}
+                              <p className="text-xs font-medium text-emerald-600 mt-1">Radio: {sede.radioPermitido}m</p>
+                            </div>
+                          </Popup>
+                        </Marker>
+                        <Circle 
+                          center={[Number(sede.latitud), Number(sede.longitud)]} 
+                          radius={sede.radioPermitido} 
+                          pathOptions={{ fillColor: '#10b981', color: '#059669', weight: 2 }} 
+                        />
+                      </div>
+                    ))}
+                  </MapContainer>
+                ) : (
+                  <div className="flex justify-center items-center h-full text-slate-500">
+                    No hay sedes registradas para mostrar en el mapa.
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </>
         )}
       </div>

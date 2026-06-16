@@ -91,6 +91,11 @@ const getDashboardStats = async (req, res) => {
       orderBy: { horaEntrada: 'desc' }
     });
 
+    // 6. Obtener Sedes Activas para el Mapa
+    const sedes = await prisma.sede.findMany({
+      where: { activo: true }
+    });
+
     res.json({
       estadisticas: {
         totalEmpleados,
@@ -101,7 +106,8 @@ const getDashboardStats = async (req, res) => {
         ausentes
       },
       registrosRecientes,
-      empleadosAusentes: empleadosAusentesData
+      empleadosAusentes: empleadosAusentesData,
+      sedes
     });
 
   } catch (error) {
