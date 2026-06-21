@@ -398,7 +398,7 @@ const getLateArrivalsReport = async (req, res) => {
 const updateManualEntry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { horaEntrada } = req.body;
+    const { horaEntrada, horaSalida } = req.body;
 
     const asistencia = await prisma.asistencia.findUnique({
       where: { id: parseInt(id) },
@@ -438,14 +438,21 @@ const updateManualEntry = async (req, res) => {
     // The Date object to save should match the specific date of the attendance record
     const fechaOriginal = dayjs.utc(asistencia.fecha).format('YYYY-MM-DD');
     const fullDateObj = dayjs.tz(`${fechaOriginal}T${horaIngresoStr}`).toDate();
+    
+    let fullDateSalidaObj = null;
+    if (horaSalida) {
+      const horaSalidaStr = `${horaSalida}:00`;
+      fullDateSalidaObj = dayjs.tz(`${fechaOriginal}T${horaSalidaStr}`).toDate();
+    }
 
     const updatedAsistencia = await prisma.asistencia.update({
       where: { id: parseInt(id) },
       data: {
         horaEntrada: fullDateObj,
+        horaSalida: fullDateSalidaObj,
         estadoId: estadoObj.id,
         minutosTarde,
-        observaciones: `Ingreso manual por admin: ${horaEntrada}.`
+        observaciones: `Ingreso manual por admin: Entrada ${horaEntrada}${horaSalida ? `, Salida ${horaSalida}` : ''}.`
       }
     });
 

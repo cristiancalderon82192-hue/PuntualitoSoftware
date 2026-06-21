@@ -140,8 +140,8 @@ const checkIn = async (req, res) => {
       where: { usuarioId, fecha: hoy }
     });
 
+    const horario = usuario.horario;
     if (action === 'ENTRADA') {
-      const horario = usuario.horario;
       if (asistenciaExistente) return res.status(400).json({ error: 'Ya registraste tu llegada hoy' });
       if (!horario) return res.status(400).json({ error: 'No tienes un horario asignado. Contacta al administrador.' });
 

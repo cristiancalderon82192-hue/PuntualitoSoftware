@@ -48,6 +48,7 @@ export default function AdminHistory() {
   
   const [manualEntryAttendance, setManualEntryAttendance] = useState(null);
   const [manualEntryTime, setManualEntryTime] = useState('');
+  const [manualExitTime, setManualExitTime] = useState('');
 
   const loadFiltersData = async () => {
     try {
@@ -344,10 +345,12 @@ export default function AdminHistory() {
     if (!manualEntryAttendance || !manualEntryTime) return;
     try {
       await api.put(`/admin/attendances/${manualEntryAttendance.id}/manual-entry`, {
-        horaEntrada: manualEntryTime
+        horaEntrada: manualEntryTime,
+        horaSalida: manualExitTime || undefined
       });
       setManualEntryAttendance(null);
       setManualEntryTime('');
+      setManualExitTime('');
       loadAttendances();
     } catch (error) {
       alert('Error al guardar el ingreso manual');
@@ -955,6 +958,7 @@ export default function AdminHistory() {
                             onClick={() => {
                               setManualEntryAttendance(a);
                               setManualEntryTime('08:00');
+                              setManualExitTime('');
                             }}
                             className="p-1.5 mr-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                             title="Ingresar Manualmente"
@@ -1773,17 +1777,30 @@ export default function AdminHistory() {
                 Al ingresar la hora manualmente, el sistema calculará la puntualidad automáticamente basándose en el horario asignado del trabajador.
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Hora de Entrada (Real)
-                </label>
-                <input
-                  type="time"
-                  required
-                  value={manualEntryTime}
-                  onChange={(e) => setManualEntryTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Hora de Entrada (Real) *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={manualEntryTime}
+                    onChange={(e) => setManualEntryTime(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Hora de Salida (Opcional)
+                  </label>
+                  <input
+                    type="time"
+                    value={manualExitTime}
+                    onChange={(e) => setManualExitTime(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
               </div>
 
               <div className="pt-4 flex justify-end space-x-3">
