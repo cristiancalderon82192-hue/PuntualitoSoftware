@@ -1417,6 +1417,17 @@ export default function AdminHistory() {
                                   </a>
                                 )}
                                 <button
+                                  onClick={() => {
+                                    setManualEntryAttendance(a);
+                                    setManualEntryTime(a.horaEntrada ? dayjs(a.horaEntrada).format('HH:mm') : '08:00');
+                                    setManualExitTime(a.horaSalida ? dayjs(a.horaSalida).format('HH:mm') : '');
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                  title="Editar Ingreso / Salida Manualmente"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
                                   onClick={() => handleDeleteAttendance(a.id)}
                                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                   title="Eliminar"
