@@ -20,7 +20,7 @@ const getAttendanceStatus = async (req, res) => {
     
     const asistencia = await prisma.asistencia.findFirst({
       where: { usuarioId, fecha: hoy },
-      include: { estado: true }
+      include: { estado: true, sede: true }
     });
 
     const usuario = await prisma.usuario.findUnique({
@@ -34,11 +34,21 @@ const getAttendanceStatus = async (req, res) => {
     });
 
     const tieneAlmuerzo = true; // El almuerzo está disponible para todos
-    const infoSede = usuario?.sede ? { 
-      latitud: usuario.sede.latitud, 
-      longitud: usuario.sede.longitud, 
-      radioPermitido: usuario.sede.radioPermitido 
-    } : null;
+    
+    let infoSede = null;
+    if (asistencia && asistencia.sede) {
+      infoSede = {
+        latitud: asistencia.sede.latitud,
+        longitud: asistencia.sede.longitud,
+        radioPermitido: asistencia.sede.radioPermitido
+      };
+    } else if (usuario?.sede) {
+      infoSede = { 
+        latitud: usuario.sede.latitud, 
+        longitud: usuario.sede.longitud, 
+        radioPermitido: usuario.sede.radioPermitido 
+      };
+    }
 
     const timeLimits = {
       horaInicioAlmuerzo: null,
@@ -93,15 +103,35 @@ const checkIn = async (req, res) => {
       return res.status(403).json({ error: 'Usuario inactivo o no encontrado' });
     }
 
-    const { sede, horario } = usuario;
-    const distancia = calcularDistancia(
-      Number(sede.latitud), Number(sede.longitud), 
+    let sedeDetectada = usuario.sede;
+    let distancia = calcularDistancia(
+      Number(sedeDetectada.latitud), Number(sedeDetectada.longitud), 
       Number(latitud), Number(longitud)
     );
 
-    if (action !== 'SALIDA' && distancia > sede.radioPermitido) {
+    let dentroDeGeocerca = distancia <= sedeDetectada.radioPermitido;
+
+    // Si no está en su sede asignada, buscar en todas las demás sedes activas
+    if (action !== 'SALIDA' && !dentroDeGeocerca) {
+      const todasLasSedes = await prisma.sede.findMany({ where: { activo: true } });
+      for (const otraSede of todasLasSedes) {
+        if (otraSede.id === sedeDetectada.id) continue;
+        const d = calcularDistancia(
+          Number(otraSede.latitud), Number(otraSede.longitud), 
+          Number(latitud), Number(longitud)
+        );
+        if (d <= otraSede.radioPermitido) {
+          sedeDetectada = otraSede;
+          distancia = d;
+          dentroDeGeocerca = true;
+          break;
+        }
+      }
+    }
+
+    if (action !== 'SALIDA' && !dentroDeGeocerca) {
       return res.status(403).json({ 
-        error: `Estás a ${Math.round(distancia)} metros de la sede. El máximo permitido es ${sede.radioPermitido} metros.` 
+        error: `No estás dentro de la geocerca de ninguna sede. Estás a ${Math.round(distancia)} metros de tu sede principal.` 
       });
     }
 
@@ -136,7 +166,7 @@ const checkIn = async (req, res) => {
           latitudEntrada: latitud,
           longitudEntrada: longitud,
           usuarioId,
-          sedeId: sede.id,
+          sedeId: sedeDetectada.id,
           estadoId: estadoObj.id,
           minutosTarde
         },
@@ -185,7 +215,7 @@ const checkIn = async (req, res) => {
       if (asistenciaExistente.horaSalida) return res.status(400).json({ error: 'Ya registraste tu salida' });
       
       let minutosExtra = 0;
-      if (horario && horario.horaFin) {
+      if (horario && horario.horaFin && usuario.puedeAcumularExtras) {
         const horaActualObj = dayjs().tz();
         const horaFinArr = horario.horaFin.split(':');
         let limiteSalidaObj = dayjs().tz()

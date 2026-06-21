@@ -93,7 +93,7 @@ export default function AdminLayout({ children }) {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0 relative">
+      <main className="flex-1 overflow-y-auto pb-20 md:pb-0 relative min-w-0 w-full">
         {children}
       </main>
 

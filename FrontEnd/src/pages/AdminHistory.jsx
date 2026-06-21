@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2, Award, Edit } from 'lucide-react';
+import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2, Award, Edit, FileText } from 'lucide-react';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
@@ -34,8 +34,20 @@ export default function AdminHistory() {
   const [loadingReport, setLoadingReport] = useState(true);
   const reportRef = useRef(null);
   const reportPuntualesRef = useRef(null);
+  const reportAusentismosRef = useRef(null);
+  const reportDetalleRef = useRef(null);
+  const reportGeneralRef = useRef(null);
+  const reportLunchDetalleRef = useRef(null);
+  const [selectedEmployeeLunchDetails, setSelectedEmployeeLunchDetails] = useState(null);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingPDFPuntuales, setIsExportingPDFPuntuales] = useState(false);
+  const [isExportingPDFAusentismos, setIsExportingPDFAusentismos] = useState(false);
+  const [isExportingPDFDetalle, setIsExportingPDFDetalle] = useState(false);
+  const [isExportingPDFGeneral, setIsExportingPDFGeneral] = useState(false);
+  const [isExportingPDFLunchDetalle, setIsExportingPDFLunchDetalle] = useState(false);
+  
+  const [manualEntryAttendance, setManualEntryAttendance] = useState(null);
+  const [manualEntryTime, setManualEntryTime] = useState('');
 
   const loadFiltersData = async () => {
     try {
@@ -148,6 +160,45 @@ export default function AdminHistory() {
 
   const consolidatedData = getConsolidatedData();
 
+  const getExtrasConsolidatedData = () => {
+    const grouped = {};
+    processedAttendances.forEach(a => {
+      if (!a.minutosExtra && !a.minutosExtraAprobados) return;
+
+      if (!grouped[a.usuarioId]) {
+        grouped[a.usuarioId] = {
+          usuarioId: a.usuarioId,
+          usuario: a.usuario,
+          sede: a.sede,
+          diasConExtras: 0,
+          minutosExtraGenerados: 0,
+          minutosExtraAprobados: 0,
+          minutosExtraRechazados: 0,
+          minutosExtraPendientes: 0,
+        };
+      }
+      
+      const g = grouped[a.usuarioId];
+      
+      if (a.minutosExtra > 0 || a.minutosExtraAprobados > 0) {
+        g.diasConExtras++;
+        g.minutosExtraGenerados += (a.minutosExtra || 0);
+        
+        if (a.estadoExtras === 'APROBADO') {
+          g.minutosExtraAprobados += (a.minutosExtraAprobados || 0);
+        } else if (a.estadoExtras === 'RECHAZADO') {
+          g.minutosExtraRechazados += (a.minutosExtra || 0);
+        } else if (a.estadoExtras === 'PENDIENTE') {
+          g.minutosExtraPendientes += (a.minutosExtra || 0);
+        }
+      }
+    });
+    
+    return Object.values(grouped).sort((a, b) => b.minutosExtraAprobados - a.minutosExtraAprobados);
+  };
+
+  const extrasConsolidatedData = getExtrasConsolidatedData();
+
   const getPuntualidadRanking = () => {
     const userTimes = {};
     
@@ -208,6 +259,33 @@ export default function AdminHistory() {
     return averaged.sort((a, b) => a.avgMins - b.avgMins);
   };
 
+  const getLunchConsolidatedData = () => {
+    const grouped = {};
+    filteredAttendances.forEach(a => {
+      if (!grouped[a.usuarioId]) {
+        grouped[a.usuarioId] = {
+          usuarioId: a.usuarioId,
+          usuario: a.usuario,
+          sede: a.sede,
+          diasConAlmuerzo: 0,
+          totalMinutosAlmuerzo: 0,
+        };
+      }
+      
+      if (a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo) {
+        const salida = dayjs(a.horaSalidaAlmuerzo);
+        const entrada = dayjs(a.horaEntradaAlmuerzo);
+        const diff = entrada.diff(salida, 'minute');
+        grouped[a.usuarioId].diasConAlmuerzo++;
+        grouped[a.usuarioId].totalMinutosAlmuerzo += diff;
+      }
+    });
+    
+    return Object.values(grouped).filter(c => c.diasConAlmuerzo > 0).sort((a, b) => b.diasConAlmuerzo - a.diasConAlmuerzo);
+  };
+
+  const lunchConsolidatedData = getLunchConsolidatedData();
+
   const puntualidadRanking = getPuntualidadRanking();
   const topPuntuales = puntualidadRanking.slice(0, 5);
 
@@ -231,17 +309,48 @@ export default function AdminHistory() {
     }
   };
 
-  const handleApproveExtrasSubmit = async (e) => {
-    e.preventDefault();
+  const handleApproveExtras = async () => {
     if (!approvingExtra) return;
     try {
       await api.put(`/admin/attendances/${approvingExtra.id}/approve-extras`, {
-        minutosAprobados: Number(extraMinutesToApprove)
+        minutosAprobados: Number(extraMinutesToApprove),
+        estadoExtras: 'APROBADO'
       });
       setApprovingExtra(null);
       loadAttendances();
     } catch (error) {
       alert('Error al aprobar las horas extras');
+    }
+  };
+
+  const handleRejectExtras = async () => {
+    if (!approvingExtra) return;
+    if (window.confirm('¿Seguro que deseas rechazar estas horas extras?')) {
+      try {
+        await api.put(`/admin/attendances/${approvingExtra.id}/approve-extras`, {
+          minutosAprobados: 0,
+          estadoExtras: 'RECHAZADO'
+        });
+        setApprovingExtra(null);
+        loadAttendances();
+      } catch (error) {
+        alert('Error al rechazar las horas extras');
+      }
+    }
+  };
+
+  const handleManualEntrySubmit = async (e) => {
+    e.preventDefault();
+    if (!manualEntryAttendance || !manualEntryTime) return;
+    try {
+      await api.put(`/admin/attendances/${manualEntryAttendance.id}/manual-entry`, {
+        horaEntrada: manualEntryTime
+      });
+      setManualEntryAttendance(null);
+      setManualEntryTime('');
+      loadAttendances();
+    } catch (error) {
+      alert('Error al guardar el ingreso manual');
     }
   };
 
@@ -334,6 +443,58 @@ export default function AdminHistory() {
     }
   };
 
+  const handleExportPDFAusentismos = async () => {
+    if (!reportAusentismosRef.current) return;
+    setIsExportingPDFAusentismos(true);
+    try {
+      const element = reportAusentismosRef.current;
+      const imgData = await toPng(element, { 
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
+      });
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Reporte_Ausentismos_${dayjs().format('YYYYMMDD')}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF Ausentismos', error);
+      alert('Hubo un error al generar el PDF: ' + error.message);
+    } finally {
+      setIsExportingPDFAusentismos(false);
+    }
+  };
+
+  const handleExportPDFDetalle = async () => {
+    if (!reportDetalleRef.current) return;
+    setIsExportingPDFDetalle(true);
+    try {
+      const element = reportDetalleRef.current;
+      const imgData = await toPng(element, { 
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
+      });
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const emp = users.find(u => u.id === selectedEmployeeDetails);
+      const empName = emp ? emp.nombre : 'Empleado';
+      pdf.save(`Detalle_Asistencia_${empName}_${dayjs().format('YYYYMMDD')}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF Detalle', error);
+      alert('Hubo un error al generar el PDF: ' + error.message);
+    } finally {
+      setIsExportingPDFDetalle(false);
+    }
+  };
+
   const handleExportPDFPuntuales = async () => {
     if (!reportPuntualesRef.current) return;
     setIsExportingPDFPuntuales(true);
@@ -359,6 +520,58 @@ export default function AdminHistory() {
     }
   };
 
+  const handleExportPDFGeneral = async () => {
+    if (!reportGeneralRef.current) return;
+    setIsExportingPDFGeneral(true);
+    try {
+      const element = reportGeneralRef.current;
+      const imgData = await toPng(element, { 
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
+      });
+      
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Reporte_${activeTab}_${dayjs().format('YYYYMMDD')}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF', error);
+      alert('Hubo un error al generar el PDF: ' + error.message);
+    } finally {
+      setIsExportingPDFGeneral(false);
+    }
+  };
+
+  const handleExportPDFLunchDetalle = async () => {
+    if (!reportLunchDetalleRef.current) return;
+    setIsExportingPDFLunchDetalle(true);
+    try {
+      const element = reportLunchDetalleRef.current;
+      const imgData = await toPng(element, { 
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
+      });
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const emp = users.find(u => u.id === selectedEmployeeLunchDetails);
+      const empName = emp ? emp.nombre : 'Empleado';
+      pdf.save(`Detalle_Almuerzos_${empName}_${dayjs().format('YYYYMMDD')}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF Detalle Almuerzos', error);
+      alert('Hubo un error al generar el PDF: ' + error.message);
+    } finally {
+      setIsExportingPDFLunchDetalle(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -376,6 +589,17 @@ export default function AdminHistory() {
               <span>Exportar a Excel</span>
             </button>
 
+            {['general', 'reporte_almuerzos', 'consolidado', 'consolidado_extras'].includes(activeTab) && (
+              <button 
+                onClick={handleExportPDFGeneral}
+                disabled={isExportingPDFGeneral}
+                className="flex items-center justify-center space-x-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 transition-colors shadow-sm font-medium disabled:opacity-50 w-full"
+              >
+                <Download className="w-5 h-5" />
+                <span>{isExportingPDFGeneral ? 'Generando PDF...' : 'Descargar Reporte PDF'}</span>
+              </button>
+            )}
+
             {activeTab === 'reportes' && (
               <button 
                 onClick={handleExportPDF}
@@ -391,20 +615,31 @@ export default function AdminHistory() {
               <button 
                 onClick={handleExportPDFPuntuales}
                 disabled={isExportingPDFPuntuales}
-                className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl hover:bg-emerald-800 transition-colors shadow-sm font-medium disabled:opacity-50 w-full"
+                className="flex items-center justify-center space-x-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 transition-colors shadow-sm font-medium disabled:opacity-50 w-full"
               >
                 <Download className="w-5 h-5" />
                 <span>{isExportingPDFPuntuales ? 'Generando PDF...' : 'Descargar Ranking PDF'}</span>
+              </button>
+            )}
+
+            {activeTab === 'ausentismos' && (
+              <button 
+                onClick={handleExportPDFAusentismos}
+                disabled={isExportingPDFAusentismos}
+                className="flex items-center justify-center space-x-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl hover:bg-rose-700 transition-colors shadow-sm font-medium disabled:opacity-50 w-full"
+              >
+                <Download className="w-5 h-5" />
+                <span>{isExportingPDFAusentismos ? 'Generando PDF...' : 'Descargar Reporte PDF'}</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 bg-slate-200/50 p-1 rounded-xl w-full max-w-2xl mb-6">
+        <div className="flex bg-slate-200/50 p-1 rounded-xl w-full max-w-full overflow-x-auto hide-scrollbar mb-6 gap-1">
           <button
             onClick={() => setActiveTab('general')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'general' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -413,7 +648,7 @@ export default function AdminHistory() {
           </button>
           <button
             onClick={() => setActiveTab('reporte_almuerzos')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'reporte_almuerzos' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -422,7 +657,7 @@ export default function AdminHistory() {
           </button>
           <button
             onClick={() => setActiveTab('consolidado')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'consolidado' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -431,8 +666,18 @@ export default function AdminHistory() {
             <span className="sm:hidden">Consolidado</span>
           </button>
           <button
+            onClick={() => setActiveTab('consolidado_extras')}
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'consolidado_extras' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Clock className="w-4 h-4 text-indigo-500" />
+            <span className="hidden sm:inline">Horas Extras</span>
+            <span className="sm:hidden">Extras</span>
+          </button>
+          <button
             onClick={() => setActiveTab('reportes')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'reportes' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
@@ -442,13 +687,23 @@ export default function AdminHistory() {
           </button>
           <button
             onClick={() => setActiveTab('puntuales')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'puntuales' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
             <Award className="w-4 h-4 text-emerald-500" />
             <span className="hidden sm:inline">Top Puntuales</span>
             <span className="sm:hidden">Top Puntuales</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('ausentismos')}
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'ausentismos' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <X className="w-4 h-4 text-red-500" />
+            <span className="hidden sm:inline">Ausentismos</span>
+            <span className="sm:hidden">Faltas</span>
           </button>
         </div>
 
@@ -525,8 +780,8 @@ export default function AdminHistory() {
 
         {/* Contenido Principal */}
         {activeTab === 'reportes' ? (
-          <div className="space-y-6">
-            <div ref={reportRef} className="space-y-6 bg-slate-50 p-4 rounded-2xl">
+          <div className="space-y-6 overflow-x-auto">
+            <div ref={reportRef} className="space-y-6 bg-slate-50 p-4 rounded-2xl w-full min-w-max">
               
               <div className="grid grid-cols-1 gap-6">
                 {/* Gráfico Animado en Tiempo Real (Reporte de Tardanzas) */}
@@ -588,7 +843,7 @@ export default function AdminHistory() {
                 <h3 className="text-lg font-bold text-slate-800">Detalle de Tardanzas</h3>
                 <p className="text-sm text-slate-500">Filtrado por las fechas y parámetros de arriba</p>
               </div>
-              <div className="overflow-x-auto">
+              <div className="min-w-full inline-block align-middle">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -657,9 +912,80 @@ export default function AdminHistory() {
             </div>
             </div>
           </div>
+        ) : activeTab === 'ausentismos' ? (
+          <div className="space-y-6 overflow-x-auto">
+            <div ref={reportAusentismosRef} className="bg-white rounded-2xl shadow-sm border border-slate-100 w-full min-w-max">
+              <div className="p-5 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800">Reporte de Ausentismos Laborales</h3>
+                <p className="text-sm text-slate-500">Empleados que no registraron su asistencia en el día (Filtrado por fecha y sede)</p>
+              </div>
+              <div className="min-w-full inline-block align-middle">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      <th className="px-6 py-4">Fecha</th>
+                      <th className="px-6 py-4">Empleado</th>
+                      <th className="px-6 py-4 text-center">Estado</th>
+                      <th className="px-6 py-4">Observaciones / Detalles</th>
+                      <th className="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {processedAttendances.filter(a => a.estado.nombre === 'AUSENTE').map((a) => (
+                      <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-slate-800">{a.usuario.nombre} {a.usuario.apellido}</p>
+                          <p className="text-xs text-slate-500 font-mono">{a.usuario.documento} • {a.sede.nombre}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+                            FALTA INJUSTIFICADA
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-md">
+                          <p className="text-slate-600 italic text-xs border-l-2 border-red-200 pl-2">
+                            {a.observaciones || 'Ausencia detectada por el sistema automático'}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setManualEntryAttendance(a);
+                              setManualEntryTime('08:00');
+                            }}
+                            className="p-1.5 mr-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                            title="Ingresar Manualmente"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAttendance(a.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Eliminar falta"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {processedAttendances.filter(a => a.estado.nombre === 'AUSENTE').length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
+                          No se encontraron ausentismos en el periodo seleccionado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         ) : activeTab === 'puntuales' ? (
-          <div className="space-y-6">
-            <div ref={reportPuntualesRef} className="bg-slate-50 p-4 rounded-2xl">
+          <div className="space-y-6 overflow-x-auto">
+            <div ref={reportPuntualesRef} className="bg-slate-50 p-4 rounded-2xl w-full min-w-max">
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
                 <div className="mb-4 flex items-center space-x-3">
                   <div className="bg-emerald-100 p-2 rounded-xl">
@@ -723,7 +1049,7 @@ export default function AdminHistory() {
                   <h3 className="text-lg font-bold text-slate-800">Ranking Completo de Puntualidad</h3>
                   <p className="text-sm text-slate-500">Listado de todos los empleados ordenados de mejor a menor promedio de hora de llegada</p>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="min-w-full inline-block align-middle">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -776,12 +1102,88 @@ export default function AdminHistory() {
             </div>
           </div>
         ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="space-y-6 overflow-x-auto w-full">
+          <div ref={reportGeneralRef} className="bg-white rounded-2xl shadow-sm border border-slate-100 w-full min-w-max">
+            <div className="p-5 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800">
+                {activeTab === 'consolidado' ? 'Consolidado por Empleado' : activeTab === 'consolidado_extras' ? 'Consolidado Horas Extras' : activeTab === 'reporte_almuerzos' ? 'Reporte de Almuerzos' : 'Reporte General de Asistencias'}
+              </h3>
+              <p className="text-sm text-slate-500">
+                Periodo: {filters.fechaInicio ? dayjs(filters.fechaInicio).format('DD MMM, YYYY') : '-'} al {filters.fechaFin ? dayjs(filters.fechaFin).format('DD MMM, YYYY') : '-'}
+              </p>
+            </div>
+            <div className="min-w-full inline-block align-middle">
             {loading ? (
               <div className="flex justify-center p-10">
                 <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
               </div>
+            ) : activeTab === 'consolidado_extras' ? (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-4">Empleado</th>
+                    <th className="px-6 py-4">Sede</th>
+                    <th className="px-6 py-4 text-center">Días con Extras</th>
+                    <th className="px-6 py-4 text-center">Generadas</th>
+                    <th className="px-6 py-4 text-center text-emerald-700">Aprobadas</th>
+                    <th className="px-6 py-4 text-center text-red-700">Rechazadas</th>
+                    <th className="px-6 py-4 text-center text-amber-700">Pendientes</th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {extrasConsolidatedData.map((c) => (
+                    <tr key={`extras-cons-${c.usuarioId}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-slate-800">{c.usuario.nombre} {c.usuario.apellido}</p>
+                        <p className="text-xs text-slate-500 font-mono">{c.usuario.documento}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-slate-600">{c.sede.nombre}</p>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-bold text-slate-700">{c.diasConExtras}</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-medium text-slate-600">
+                          {formatMinutes(c.minutosExtraGenerados)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                          {formatMinutes(c.minutosExtraAprobados)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-medium text-red-600">
+                          {formatMinutes(c.minutosExtraRechazados)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-medium text-amber-600">
+                          {formatMinutes(c.minutosExtraPendientes)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleViewDetails(c.usuarioId)}
+                          className="inline-flex items-center space-x-1 text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Ver Historial</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {extrasConsolidatedData.length === 0 && (
+                    <tr>
+                      <td colSpan="8" className="px-6 py-10 text-center text-slate-500">
+                        No se encontraron registros de horas extras.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             ) : activeTab === 'consolidado' ? (
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -847,6 +1249,60 @@ export default function AdminHistory() {
                   )}
                 </tbody>
               </table>
+            ) : activeTab === 'reporte_almuerzos' ? (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-4">Empleado</th>
+                    <th className="px-6 py-4">Sede</th>
+                    <th className="px-6 py-4 text-center">Días con Almuerzo</th>
+                    <th className="px-6 py-4 text-center">Tiempo Promedio</th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {lunchConsolidatedData.map((c) => (
+                    <tr key={`lunch-cons-${c.usuarioId}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-slate-800">{c.usuario.nombre} {c.usuario.apellido}</p>
+                        <p className="text-xs text-slate-500 font-mono">{c.usuario.documento}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-slate-600">{c.sede.nombre}</p>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-bold text-slate-700">{c.diasConAlmuerzo}</span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {(() => {
+                          const avgMins = Math.round(c.totalMinutosAlmuerzo / c.diasConAlmuerzo);
+                          return (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
+                              {avgMins}m
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => setSelectedEmployeeLunchDetails(c.usuarioId)}
+                          className="inline-flex items-center space-x-1 text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Ver Historial</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {lunchConsolidatedData.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-10 text-center text-slate-500">
+                        No se encontraron registros de almuerzos.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -854,22 +1310,11 @@ export default function AdminHistory() {
                     <th className="px-6 py-4">Fecha</th>
                     <th className="px-6 py-4">Empleado</th>
                     <th className="px-6 py-4">Sede</th>
-                    {activeTab === 'reporte_almuerzos' ? (
-                      <>
-                        <th className="px-6 py-4">Salida Almuerzo</th>
-                        <th className="px-6 py-4">Regreso Almuerzo</th>
-                        <th className="px-6 py-4 text-center">Tiempo Tomado</th>
-                        <th className="px-6 py-4 text-right">Acciones</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="px-6 py-4">Horarios Registrados</th>
-                        <th className="px-6 py-4">Horas Extras</th>
-                        <th className="px-6 py-4">Estado</th>
-                        <th className="px-6 py-4">Observaciones</th>
-                        <th className="px-6 py-4 text-right">Acciones</th>
-                      </>
-                    )}
+                    <th className="px-6 py-4">Horarios Registrados</th>
+                    <th className="px-6 py-4">Horas Extras</th>
+                    <th className="px-6 py-4">Estado</th>
+                    <th className="px-6 py-4">Observaciones</th>
+                    <th className="px-6 py-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -889,45 +1334,6 @@ export default function AdminHistory() {
                         <td className="px-6 py-4">
                           <p className="text-sm text-slate-600">{a.sede.nombre}</p>
                         </td>
-                             {activeTab === 'reporte_almuerzos' ? (
-                          <>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="font-medium text-slate-700">{a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : '-'}</span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="font-medium text-slate-700">{a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : '-'}</span>
-                            </td>
-                            <td className="px-6 py-4 text-center whitespace-nowrap">
-                              {a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo ? (() => {
-                                const salida = dayjs(a.horaSalidaAlmuerzo);
-                                const entrada = dayjs(a.horaEntradaAlmuerzo);
-                                const diff = entrada.diff(salida, 'minute');
-                                const horas = Math.floor(diff / 60);
-                                const minutos = diff % 60;
-                                return (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
-                                    {horas > 0 ? `${horas}h ` : ''}{minutos}m
-                                  </span>
-                                );
-                              })() : (
-                                <span className="text-xs text-slate-400 italic">{a.horaSalidaAlmuerzo ? 'En almuerzo...' : 'Sin registrar'}</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center justify-end space-x-2">
-
-                                <button
-                                  onClick={() => handleDeleteAttendance(a.id)}
-                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </>
-                        ) : (
-                          <>
                             <td className="px-6 py-4 whitespace-nowrap text-xs space-y-1">
                               {a.horaEntrada && <p><span className="text-slate-400">Entrada:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntrada).format('hh:mm A')}</span></p>}
                               {a.horaSalidaAlmuerzo && <p><span className="text-slate-400">Sale Almz:</span> <span className="font-medium text-slate-700">{dayjs(a.horaSalidaAlmuerzo).format('hh:mm A')}</span></p>}
@@ -940,9 +1346,13 @@ export default function AdminHistory() {
                                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 w-fit">
                                     Sistema: + {formatMinutes(a.minutosExtra)}
                                   </span>
-                                  {a.minutosExtraAprobados !== null ? (
+                                  {a.estadoExtras === 'APROBADO' ? (
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">
                                       Aprobado: {formatMinutes(a.minutosExtraAprobados)}
+                                    </span>
+                                  ) : a.estadoExtras === 'RECHAZADO' ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200 w-fit">
+                                      Rechazadas
                                     </span>
                                   ) : (
                                     <button
@@ -1011,8 +1421,6 @@ export default function AdminHistory() {
                                 </button>
                               </div>
                             </td>
-                          </>
-                        )}
                       </tr>
                     );
                   })}
@@ -1026,6 +1434,7 @@ export default function AdminHistory() {
                 </tbody>
               </table>
             )}
+            </div>
           </div>
         </div>
         )}
@@ -1040,21 +1449,39 @@ export default function AdminHistory() {
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div>
                 <h3 className="text-lg font-bold text-slate-800">
-                  Detalle de Asistencia
+                  Resumen de Asistencia
                 </h3>
-                <p className="text-sm text-slate-500">Filtrado para el periodo seleccionado</p>
               </div>
-              <button
-                onClick={() => setSelectedEmployeeDetails(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleExportPDFDetalle}
+                  disabled={isExportingPDFDetalle}
+                  className="inline-flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm shadow-rose-200 disabled:opacity-50"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{isExportingPDFDetalle ? 'Generando PDF...' : 'Descargar PDF'}</span>
+                </button>
+                <button
+                  onClick={() => setSelectedEmployeeDetails(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Body */}
             <div className="overflow-y-auto overflow-x-auto p-6 bg-white">
-              <div className="min-w-full inline-block align-middle">
+              <div className="min-w-max bg-white" ref={reportDetalleRef}>
+                <div className="mb-6 pb-4 border-b border-slate-100">
+                  <h3 className="text-xl font-bold text-slate-800">
+                    Reporte Detallado: {users.find(u => u.id === selectedEmployeeDetails)?.nombre} {users.find(u => u.id === selectedEmployeeDetails)?.apellido}
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Periodo de reporte: {filters.fechaInicio ? dayjs(filters.fechaInicio).format('DD MMM, YYYY') : '-'} al {filters.fechaFin ? dayjs(filters.fechaFin).format('DD MMM, YYYY') : '-'}
+                  </p>
+                </div>
+                <div className="min-w-full inline-block align-middle">
                 <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -1083,9 +1510,21 @@ export default function AdminHistory() {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {a.minutosExtra > 0 ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
-                              + {formatMinutes(a.minutosExtra)}
-                            </span>
+                            <div className="flex flex-col space-y-1">
+                              {a.estadoExtras === 'APROBADO' ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 w-fit">
+                                  Aprobado: {formatMinutes(a.minutosExtraAprobados)}
+                                </span>
+                              ) : a.estadoExtras === 'RECHAZADO' ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium border bg-red-50 text-red-700 border-red-200 w-fit">
+                                  Rechazadas
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-indigo-50 text-indigo-700 w-fit" title="Pendiente de aprobación">
+                                  Sistema: + {formatMinutes(a.minutosExtra)}
+                                </span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-xs text-slate-400 font-medium px-2 py-1">
                               0m
@@ -1139,6 +1578,103 @@ export default function AdminHistory() {
                 </tbody>
               </table>
               </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalle de Almuerzos por Empleado */}
+      {selectedEmployeeLunchDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+              <h3 className="text-lg font-bold text-slate-800">
+                Historial de Almuerzos
+              </h3>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleExportPDFLunchDetalle}
+                  disabled={isExportingPDFLunchDetalle}
+                  className="inline-flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm shadow-rose-200 disabled:opacity-50"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>{isExportingPDFLunchDetalle ? 'Generando PDF...' : 'Descargar PDF'}</span>
+                </button>
+                <button
+                  onClick={() => setSelectedEmployeeLunchDetails(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="overflow-y-auto overflow-x-auto p-6 bg-slate-50">
+              <div className="min-w-max bg-white rounded-xl shadow-sm border border-slate-100 p-8" ref={reportLunchDetalleRef}>
+                <div className="mb-6 pb-4 border-b border-slate-100">
+                  <h3 className="text-xl font-bold text-slate-800">
+                    Detalle de Almuerzos: {users.find(u => u.id === selectedEmployeeLunchDetails)?.nombre} {users.find(u => u.id === selectedEmployeeLunchDetails)?.apellido}
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Periodo de reporte: {filters.fechaInicio ? dayjs(filters.fechaInicio).format('DD MMM, YYYY') : '-'} al {filters.fechaFin ? dayjs(filters.fechaFin).format('DD MMM, YYYY') : '-'}
+                  </p>
+                </div>
+                <div className="min-w-full inline-block align-middle">
+                  <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      <th className="px-4 py-3">Fecha</th>
+                      <th className="px-4 py-3 text-center">Salida Almuerzo</th>
+                      <th className="px-4 py-3 text-center">Regreso Almuerzo</th>
+                      <th className="px-4 py-3 text-center">Tiempo Tomado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredAttendances.filter(a => a.usuarioId === selectedEmployeeLunchDetails).map(a => {
+                      return (
+                        <tr key={`lunch-${a.id}`} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <span className="text-sm font-medium text-slate-700">{a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : '-'}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            <span className="text-sm font-medium text-slate-700">{a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : '-'}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {a.horaSalidaAlmuerzo && a.horaEntradaAlmuerzo ? (() => {
+                                const salida = dayjs(a.horaSalidaAlmuerzo);
+                                const entrada = dayjs(a.horaEntradaAlmuerzo);
+                                const diff = entrada.diff(salida, 'minute');
+                                const horas = Math.floor(diff / 60);
+                                const minutos = diff % 60;
+                                return (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200">
+                                    {horas > 0 ? `${horas}h ` : ''}{minutos}m
+                                  </span>
+                                );
+                              })() : (
+                                <span className="text-xs text-slate-400 italic">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {filteredAttendances.filter(a => a.usuarioId === selectedEmployeeLunchDetails).length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="px-4 py-8 text-center text-slate-500">
+                          No hay registros para mostrar.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1159,7 +1695,7 @@ export default function AdminHistory() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleApproveExtrasSubmit} className="p-6 bg-white space-y-4">
+            <div className="p-6 bg-white space-y-4">
               <div>
                 <p className="text-sm font-medium text-slate-700 mb-1">Empleado</p>
                 <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded border border-slate-100">
@@ -1181,14 +1717,14 @@ export default function AdminHistory() {
                     min="0"
                     value={extraMinutesToApprove}
                     onChange={(e) => setExtraMinutesToApprove(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
                   />
                 </div>
               </div>
               <p className="text-xs text-slate-500 italic mt-2">
                 Equivale a: {formatMinutes(Number(extraMinutesToApprove) || 0)}
               </p>
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100 mt-6">
                 <button
                   type="button"
                   onClick={() => setApprovingExtra(null)}
@@ -1197,10 +1733,72 @@ export default function AdminHistory() {
                   Cancelar
                 </button>
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors shadow-sm"
+                  type="button"
+                  onClick={handleRejectExtras}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors shadow-sm"
                 >
-                  Guardar
+                  Rechazar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApproveExtras}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors shadow-sm"
+                >
+                  Aprobar Extras
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Ingreso Manual */}
+      {manualEntryAttendance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800">
+                Ingreso Manual
+              </h3>
+              <button
+                onClick={() => setManualEntryAttendance(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleManualEntrySubmit} className="p-6 space-y-4">
+              <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-xl border border-blue-100">
+                Al ingresar la hora manualmente, el sistema calculará la puntualidad automáticamente basándose en el horario asignado del trabajador.
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Hora de Entrada (Real)
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={manualEntryTime}
+                  onChange={(e) => setManualEntryTime(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setManualEntryAttendance(null)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Guardar Ingreso
                 </button>
               </div>
             </form>

@@ -97,6 +97,9 @@ model Usuario {
   vacacionesInicio   DateTime? @db.Date
   vacacionesFin      DateTime? @db.Date
 
+  // Permisos adicionales
+  puedeAcumularExtras Boolean @default(true)
+
   // Relaciones (Claves Foráneas)
   rolId         Int
   rol           Rol      @relation(fields: [rolId], references: [id])
@@ -147,6 +150,7 @@ model Asistencia {
 
   minutosExtra    Int       @default(0) // Registro de horas extras (en minutos)
   minutosExtraAprobados Int?  // Minutos extra autorizados por el administrador
+  estadoExtras    String    @default("PENDIENTE") // "PENDIENTE", "APROBADO", "RECHAZADO"
   minutosTarde    Int       @default(0) // Registro de tardanzas (en minutos)
 
   creadoEn        DateTime @default(now())

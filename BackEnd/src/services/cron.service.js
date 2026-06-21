@@ -3,6 +3,9 @@ const prisma = require('../config/db');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const Holidays = require('date-holidays');
+
+const hd = new Holidays('CO');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -11,12 +14,24 @@ const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
 dayjs.tz.setDefault(EMPRESA_TZ);
 
 const startCronJobs = () => {
-  // 1. Ejecutar todos los días a las 23:59 (Verificación diaria de ausencias)
-  cron.schedule('59 23 * * *', async () => {
+  // 1. Ejecutar de Lunes a Sábado a las 23:59 (Verificación diaria de ausencias, omitiendo domingos)
+  cron.schedule('59 23 * * 1-6', async () => {
     console.log('[CRON] Iniciando proceso de verificación de ausencias...', new Date());
     
     try {
       const hoy = new Date(dayjs.tz().format('YYYY-MM-DD') + 'T00:00:00.000Z');
+
+      // Validación adicional: si es domingo (0), no hacer nada
+      if (dayjs(hoy).tz().day() === 0) {
+        console.log('[CRON] Hoy es domingo, se omite la verificación de ausencias.');
+        return;
+      }
+
+      // Validación adicional: si es festivo en Colombia, no hacer nada
+      if (hd.isHoliday(hoy)) {
+        console.log(`[CRON] Hoy es festivo, se omite la verificación de ausencias.`);
+        return;
+      }
 
       // 1. Asegurar que el estado "VACACIONES" exista
       let estadoVacaciones = await prisma.estadoAsistencia.findUnique({
@@ -159,6 +174,16 @@ const checkPastAbsences = async (daysBack = 15) => {
     for (let i = 1; i <= daysBack; i++) {
       const fechaCheckStr = dayjs.tz().subtract(i, 'day').format('YYYY-MM-DD');
       const fechaObj = new Date(fechaCheckStr + 'T00:00:00.000Z');
+
+      // Omitir la validación si la fecha a evaluar es domingo
+      if (dayjs(fechaObj).tz().day() === 0) {
+        continue;
+      }
+
+      // Omitir la validación si la fecha a evaluar es festivo en Colombia
+      if (hd.isHoliday(fechaObj)) {
+        continue;
+      }
 
       for (const usuario of usuariosActivos) {
         // Ignorar si el usuario fue creado después de esa fecha

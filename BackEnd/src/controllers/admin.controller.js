@@ -190,7 +190,7 @@ const createUser = async (req, res) => {
     const { 
       documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
       horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor,
-      enVacaciones, vacacionesInicio, vacacionesFin
+      enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras
     } = req.body;
 
     const hashedPassword = await bcrypt.hash(contrasena, 10);
@@ -210,7 +210,8 @@ const createUser = async (req, res) => {
       rostroDescriptor: rostroDescriptor || null,
       enVacaciones: Boolean(enVacaciones),
       vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
-      vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null
+      vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null,
+      puedeAcumularExtras: puedeAcumularExtras !== undefined ? Boolean(puedeAcumularExtras) : true
     };
 
     const nuevoUsuario = await prisma.usuario.create({
@@ -233,7 +234,7 @@ const updateUser = async (req, res) => {
     const { 
       documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
       horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64,
-      enVacaciones, vacacionesInicio, vacacionesFin
+      enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras
     } = req.body;
 
     let dataToUpdate = {
@@ -250,6 +251,10 @@ const updateUser = async (req, res) => {
       vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
       vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null
     };
+
+    if (puedeAcumularExtras !== undefined) {
+      dataToUpdate.puedeAcumularExtras = Boolean(puedeAcumularExtras);
+    }
 
     if (rostroDescriptor) {
       dataToUpdate.rostroDescriptor = rostroDescriptor;
@@ -327,7 +332,7 @@ const getFormData = async (req, res) => {
 const approveExtras = async (req, res) => {
   try {
     const { id } = req.params;
-    const { minutosAprobados } = req.body;
+    const { minutosAprobados, estadoExtras } = req.body;
 
     if (minutosAprobados === undefined) {
       return res.status(400).json({ error: 'Faltan los minutos aprobados' });
@@ -335,10 +340,13 @@ const approveExtras = async (req, res) => {
 
     const asistenciaActualizada = await prisma.asistencia.update({
       where: { id: Number(id) },
-      data: { minutosExtraAprobados: Number(minutosAprobados) }
+      data: { 
+        minutosExtraAprobados: Number(minutosAprobados),
+        estadoExtras: estadoExtras || 'APROBADO'
+      }
     });
 
-    res.json({ mensaje: 'Horas extras aprobadas correctamente', asistencia: asistenciaActualizada });
+    res.json({ mensaje: 'Horas extras actualizadas correctamente', asistencia: asistenciaActualizada });
   } catch (error) {
     console.error('Error en approveExtras:', error);
     res.status(500).json({ error: 'Error al aprobar horas extras' });
@@ -387,6 +395,66 @@ const getLateArrivalsReport = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener reporte de tardanzas' });
   }
 };
+const updateManualEntry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { horaEntrada } = req.body;
+
+    const asistencia = await prisma.asistencia.findUnique({
+      where: { id: parseInt(id) },
+      include: { usuario: { include: { horario: true } } }
+    });
+
+    if (!asistencia) {
+      return res.status(404).json({ error: 'Asistencia no encontrada' });
+    }
+
+    const { usuario } = asistencia;
+    const horario = usuario.horario;
+
+    if (!horario) {
+      return res.status(400).json({ error: 'El usuario no tiene horario asignado' });
+    }
+
+    // Calcular estado
+    const horaIngresoStr = `${horaEntrada}:00`;
+    // Add timezone handling since it will be compared to shift times in EMPRESA_TZ
+    const datePrefix = dayjs().format('YYYY-MM-DD'); // dayjs handles current date for diffing times correctly
+    const limitePuntual = dayjs.tz(`${datePrefix}T${horario.horaInicio}`).add(horario.minutosTolerancia, 'minute');
+    const actualIngreso = dayjs.tz(`${datePrefix}T${horaIngresoStr}`);
+    
+    const isTarde = actualIngreso.isAfter(limitePuntual);
+    const estadoAsistencia = isTarde ? 'TARDE' : 'PUNTUAL';
+    
+    let minutosTarde = 0;
+    if (isTarde) {
+      const horaInicioObj = dayjs.tz(`${datePrefix}T${horario.horaInicio}`);
+      minutosTarde = actualIngreso.diff(horaInicioObj, 'minute');
+      if (minutosTarde < 0) minutosTarde = 0;
+    }
+
+    const estadoObj = await prisma.estadoAsistencia.findUnique({ where: { nombre: estadoAsistencia } });
+
+    // The Date object to save should match the specific date of the attendance record
+    const fechaOriginal = dayjs.utc(asistencia.fecha).format('YYYY-MM-DD');
+    const fullDateObj = dayjs.tz(`${fechaOriginal}T${horaIngresoStr}`).toDate();
+
+    const updatedAsistencia = await prisma.asistencia.update({
+      where: { id: parseInt(id) },
+      data: {
+        horaEntrada: fullDateObj,
+        estadoId: estadoObj.id,
+        minutosTarde,
+        observaciones: `Ingreso manual por admin: ${horaEntrada}.`
+      }
+    });
+
+    res.json(updatedAsistencia);
+  } catch (error) {
+    console.error('Error en updateManualEntry:', error);
+    res.status(500).json({ error: 'Error al actualizar ingreso manual' });
+  }
+};
 
 module.exports = {
   getDashboardStats,
@@ -398,5 +466,6 @@ module.exports = {
   toggleUserStatus,
   getFormData,
   approveExtras,
-  getLateArrivalsReport
+  getLateArrivalsReport,
+  updateManualEntry
 };
