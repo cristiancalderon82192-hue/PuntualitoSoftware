@@ -174,7 +174,7 @@ export default function AdminConfig() {
   };
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 pb-24 md:p-8 md:pb-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>

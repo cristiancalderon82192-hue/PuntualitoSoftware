@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 pb-24 md:p-8 md:pb-8">
       <div className="max-w-7xl mx-auto">
         
         <div className="mb-8">
