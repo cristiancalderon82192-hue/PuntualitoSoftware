@@ -140,6 +140,10 @@ const startCronJobs = () => {
 };
 
 const checkPastAbsences = async (daysBack = 15) => {
+  // Deshabilitado temporalmente a petición del usuario para evitar llenar de ausentismos viejos.
+  console.log('[STARTUP] La verificación de inasistencias pasadas está deshabilitada.');
+  return;
+  
   console.log(`[STARTUP] Verificando inasistencias pasadas (últimos ${daysBack} días)...`);
   try {
     // Asegurar estado VACACIONES en verificación retroactiva
