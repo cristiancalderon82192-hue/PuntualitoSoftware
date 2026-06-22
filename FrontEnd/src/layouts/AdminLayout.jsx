@@ -15,7 +15,7 @@ export default function AdminLayout({ children }) {
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Empleados', path: '/admin/empleados', icon: Users },
-    { name: 'Historial y Reportes', path: '/admin/historial', icon: ClipboardList },
+    { name: 'Historial y Reportes', shortName: 'Reportes', path: '/admin/historial', icon: ClipboardList },
     { name: 'Configuración', path: '/admin/configuracion', icon: Settings },
   ];
 
@@ -112,7 +112,7 @@ export default function AdminLayout({ children }) {
                 }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'text-purple-400' : ''}`} />
-                <span className="text-[10px] font-medium">{item.name}</span>
+                <span className="text-[10px] font-medium text-center leading-tight">{item.shortName || item.name}</span>
               </Link>
             );
           })}
