@@ -10,9 +10,9 @@ const authRoutes = require('./routes/auth.routes');
 const { startCronJobs, checkPastAbsences } = require('./services/cron.service');
 
 // Middlewares
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 // Servir archivos estáticos (evidencias fotográficas)
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));

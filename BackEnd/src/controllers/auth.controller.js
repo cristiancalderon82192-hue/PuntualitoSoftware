@@ -122,7 +122,20 @@ const loginEmpleado = async (req, res) => {
     }
 
     if (!usuario.rostroDescriptor) {
-      // Es la primera vez que inicia sesión, registrar el rostro automáticamente
+      // SEGURIDAD: Exigir contraseña la primera vez que se registra el rostro
+      if (!req.body.contrasena) {
+        return res.status(401).json({ 
+          error: 'Para registrar tu rostro por primera vez, necesitas ingresar tu contraseña.',
+          requierePassword: true 
+        });
+      }
+
+      const passwordValido = await bcrypt.compare(req.body.contrasena, usuario.contrasena);
+      if (!passwordValido) {
+        return res.status(401).json({ error: 'Contraseña incorrecta. No se pudo registrar el rostro.' });
+      }
+
+      // Es la primera vez que inicia sesión y la contraseña es válida, registrar el rostro
       await prisma.usuario.update({
         where: { id: usuario.id },
         data: { rostroDescriptor }
