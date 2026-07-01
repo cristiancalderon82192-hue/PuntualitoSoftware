@@ -7,6 +7,7 @@ const {
   createUser,
   updateUser,
   toggleUserStatus,
+  deleteUser,
   getFormData,
   approveExtras,
   getLateArrivalsReport,
@@ -33,5 +34,6 @@ router.get('/users', getUsers);
 router.post('/users', createUser);
 router.put('/users/:id', updateUser);
 router.patch('/users/:id/status', toggleUserStatus);
+router.delete('/users/:id', deleteUser);
 
 module.exports = router;

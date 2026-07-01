@@ -316,6 +316,30 @@ const toggleUserStatus = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const usuario = await prisma.usuario.findUnique({ where: { id: Number(id) } });
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // 1. Eliminar primero todas sus asistencias para no romper la llave foránea
+    await prisma.asistencia.deleteMany({
+      where: { usuarioId: Number(id) }
+    });
+
+    // 2. Eliminar al usuario
+    await prisma.usuario.delete({
+      where: { id: Number(id) }
+    });
+
+    res.json({ message: 'Empleado y sus registros eliminados correctamente' });
+  } catch (error) {
+    console.error('Error en deleteUser:', error);
+    res.status(500).json({ error: 'Error al eliminar el empleado' });
+  }
+};
+
 const getFormData = async (req, res) => {
   try {
     const roles = await prisma.rol.findMany();
@@ -471,6 +495,7 @@ module.exports = {
   createUser,
   updateUser,
   toggleUserStatus,
+  deleteUser,
   getFormData,
   approveExtras,
   getLateArrivalsReport,
