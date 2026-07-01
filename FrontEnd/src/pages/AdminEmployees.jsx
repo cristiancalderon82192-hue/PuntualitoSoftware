@@ -125,6 +125,17 @@ export default function AdminEmployees() {
     }
   };
 
+  const handleDeleteEmployee = async (id) => {
+    if (window.confirm('¿Estás seguro de ELIMINAR permanentemente a este empleado y todo su historial? Esta acción no se puede deshacer.')) {
+      try {
+        await api.delete(`/admin/users/${id}`);
+        await loadData();
+      } catch (error) {
+        alert(error.response?.data?.error || 'Error al eliminar el empleado');
+      }
+    }
+  };
+
   const filteredEmployees = employees.filter(emp =>
     emp.nombre.toLowerCase().includes(search.toLowerCase()) ||
     emp.apellido.toLowerCase().includes(search.toLowerCase()) ||
@@ -221,11 +232,11 @@ export default function AdminEmployees() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleToggleStatus(emp.id)}
-                          className={`p-2 rounded-lg transition-colors ${emp.activo ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-                          title={emp.activo ? "Desactivar" : "Activar"}
+                          onClick={() => handleDeleteEmployee(emp.id)}
+                          className="p-2 rounded-lg transition-colors text-red-600 hover:bg-red-50"
+                          title="Eliminar Empleado"
                         >
-                          {emp.activo ? <Trash2 className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
