@@ -122,26 +122,10 @@ const loginEmpleado = async (req, res) => {
     }
 
     if (!usuario.rostroDescriptor) {
-      // SEGURIDAD: Exigir contraseña la primera vez que se registra el rostro
-      if (!req.body.contrasena) {
-        return res.status(401).json({ 
-          error: 'Para registrar tu rostro por primera vez, necesitas ingresar tu contraseña.',
-          requierePassword: true 
-        });
-      }
+      return res.status(403).json({ error: 'Rostro no configurado. Debes registrarlo primero.' });
+    }
 
-      const passwordValido = await bcrypt.compare(req.body.contrasena, usuario.contrasena);
-      if (!passwordValido) {
-        return res.status(401).json({ error: 'Contraseña incorrecta. No se pudo registrar el rostro.' });
-      }
-
-      // Es la primera vez que inicia sesión y la contraseña es válida, registrar el rostro
-      await prisma.usuario.update({
-        where: { id: usuario.id },
-        data: { rostroDescriptor }
-      });
-    } else {
-      // Calcular distancia Euclidiana
+    // Calcular distancia Euclidiana
       const storedDescriptor = JSON.parse(usuario.rostroDescriptor);
       const incomingDescriptor = JSON.parse(rostroDescriptor);
 
@@ -155,7 +139,6 @@ const loginEmpleado = async (req, res) => {
       if (distance > 0.6) {
         return res.status(401).json({ error: 'El rostro no coincide con el registrado' });
       }
-    }
 
     const payload = {
       id: usuario.id,
@@ -242,8 +225,82 @@ const register = async (req, res) => {
   }
 };
 
+// -------------------------------------------------------------
+// Rutas nuevas para el flujo paso a paso en el FrontEnd
+// -------------------------------------------------------------
+
+// Controlador para verificar si un empleado ya tiene rostro registrado
+const checkRostro = async (req, res) => {
+  try {
+    const { documento } = req.body;
+    if (!documento) return res.status(400).json({ error: 'Documento requerido' });
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { documento }
+    });
+
+    if (!usuario) return res.status(404).json({ error: 'Empleado no encontrado' });
+    if (!usuario.activo) return res.status(403).json({ error: 'El usuario está desactivado' });
+
+    res.json({
+      tieneRostro: !!usuario.rostroDescriptor
+    });
+  } catch (error) {
+    console.error('Error en checkRostro:', error);
+    res.status(500).json({ error: 'Error interno' });
+  }
+};
+
+// Controlador para registrar el rostro por primera vez usando contraseña
+const registrarRostro = async (req, res) => {
+  try {
+    const { documento, contrasena, rostroDescriptor } = req.body;
+    if (!documento || !contrasena || !rostroDescriptor) {
+      return res.status(400).json({ error: 'Faltan datos (documento, contraseña, rostro)' });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { documento },
+      include: { rol: true, sede: true }
+    });
+
+    if (!usuario) return res.status(404).json({ error: 'Empleado no encontrado' });
+    if (usuario.rostroDescriptor) return res.status(400).json({ error: 'El rostro ya está registrado. Por favor ingresa normalmente.' });
+
+    const passwordValido = await bcrypt.compare(contrasena, usuario.contrasena);
+    if (!passwordValido) return res.status(401).json({ error: 'Contraseña incorrecta' });
+
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { rostroDescriptor }
+    });
+
+    const payload = { id: usuario.id, rol: usuario.rol.nombre, sedeId: usuario.sedeId };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+
+    res.json({
+      mensaje: 'Rostro registrado y login exitoso',
+      token,
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        correo: usuario.correo,
+        rol: usuario.rol.nombre,
+        sede: usuario.sede.nombre
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en registrarRostro:', error);
+    res.status(500).json({ error: 'Error interno' });
+  }
+};
+
 module.exports = {
   login,
   loginEmpleado,
-  register
+  register,
+  checkRostro,
+  registrarRostro
 };
