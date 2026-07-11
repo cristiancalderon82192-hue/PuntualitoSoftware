@@ -32,7 +32,7 @@ const login = async (req, res) => {
 
     if (usuario.fechaInicioLabores) {
       const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
-      const fechaInicio = dayjs(usuario.fechaInicioLabores).tz(EMPRESA_TZ).startOf('day');
+      const fechaInicio = dayjs.utc(usuario.fechaInicioLabores).tz(EMPRESA_TZ, true).startOf('day');
       const hoyTz = dayjs().tz(EMPRESA_TZ).startOf('day');
       
       if (hoyTz.isBefore(fechaInicio)) {
@@ -43,8 +43,8 @@ const login = async (req, res) => {
 
     if (usuario.rol.nombre === 'EMPLEADO' && usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
       const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
-      const inicio = dayjs(usuario.vacacionesInicio).tz(EMPRESA_TZ).startOf('day');
-      const fin = dayjs(usuario.vacacionesFin).tz(EMPRESA_TZ).endOf('day');
+      const inicio = dayjs.utc(usuario.vacacionesInicio).tz(EMPRESA_TZ, true).startOf('day');
+      const fin = dayjs.utc(usuario.vacacionesFin).tz(EMPRESA_TZ, true).endOf('day');
       const hoyTz = dayjs().tz(EMPRESA_TZ);
 
       if (hoyTz.isAfter(inicio.subtract(1, 'second')) && hoyTz.isBefore(fin.add(1, 'second'))) {
@@ -122,7 +122,7 @@ const loginEmpleado = async (req, res) => {
 
     if (usuario.fechaInicioLabores) {
       const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
-      const fechaInicio = dayjs(usuario.fechaInicioLabores).tz(EMPRESA_TZ).startOf('day');
+      const fechaInicio = dayjs.utc(usuario.fechaInicioLabores).tz(EMPRESA_TZ, true).startOf('day');
       const hoyTz = dayjs().tz(EMPRESA_TZ).startOf('day');
       
       if (hoyTz.isBefore(fechaInicio)) {
@@ -133,8 +133,8 @@ const loginEmpleado = async (req, res) => {
 
     if (usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
       const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
-      const inicio = dayjs(usuario.vacacionesInicio).tz(EMPRESA_TZ).startOf('day');
-      const fin = dayjs(usuario.vacacionesFin).tz(EMPRESA_TZ).endOf('day');
+      const inicio = dayjs.utc(usuario.vacacionesInicio).tz(EMPRESA_TZ, true).startOf('day');
+      const fin = dayjs.utc(usuario.vacacionesFin).tz(EMPRESA_TZ, true).endOf('day');
       const hoyTz = dayjs().tz(EMPRESA_TZ);
 
       if (hoyTz.isAfter(inicio.subtract(1, 'second')) && hoyTz.isBefore(fin.add(1, 'second'))) {
