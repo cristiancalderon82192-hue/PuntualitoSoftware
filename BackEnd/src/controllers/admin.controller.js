@@ -52,6 +52,14 @@ const getDashboardStats = async (req, res) => {
       where: {
         activo: true,
         rol: { nombre: 'EMPLEADO' },
+        AND: [
+          {
+            OR: [
+              { fechaInicioLabores: null },
+              { fechaInicioLabores: { lte: hoy } }
+            ]
+          }
+        ],
         OR: [
           { asistencias: { none: { fecha: hoy } } },
           { asistencias: { some: { fecha: hoy, estado: { nombre: 'AUSENTE' } } } }

@@ -73,12 +73,21 @@ const startCronJobs = () => {
           }
         });
 
+        // Verificar fecha de inicio de labores
+        if (usuario.fechaInicioLabores) {
+          const fechaInicio = dayjs.utc(usuario.fechaInicioLabores).tz(EMPRESA_TZ, true).startOf('day');
+          const hoyTz = dayjs(hoy).tz();
+          if (hoyTz.isBefore(fechaInicio)) {
+            continue; // El empleado aún no ingresa a laborar, omitir
+          }
+        }
+
         // Si no tiene asistencia, evaluamos si está de vacaciones
         if (!asistenciaHoy) {
           let esVacacion = false;
           if (usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
-            const inicio = dayjs(usuario.vacacionesInicio).tz().startOf('day');
-            const fin = dayjs(usuario.vacacionesFin).tz().endOf('day');
+            const inicio = dayjs.utc(usuario.vacacionesInicio).tz(EMPRESA_TZ, true).startOf('day');
+            const fin = dayjs.utc(usuario.vacacionesFin).tz(EMPRESA_TZ, true).endOf('day');
             const hoyTz = dayjs(hoy).tz();
 
             if (hoyTz.isAfter(inicio.subtract(1, 'second')) && hoyTz.isBefore(fin.add(1, 'second'))) {
