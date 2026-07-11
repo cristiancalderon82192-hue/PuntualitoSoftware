@@ -31,7 +31,8 @@ export default function AdminEmployees() {
     enVacaciones: false,
     vacacionesInicio: '',
     vacacionesFin: '',
-    puedeAcumularExtras: true
+    puedeAcumularExtras: true,
+    fechaInicioLabores: ''
   });
   const [formError, setFormError] = useState('');
 
@@ -72,7 +73,8 @@ export default function AdminEmployees() {
         enVacaciones: employee.enVacaciones || false,
         vacacionesInicio: employee.vacacionesInicio ? employee.vacacionesInicio.split('T')[0] : '',
         vacacionesFin: employee.vacacionesFin ? employee.vacacionesFin.split('T')[0] : '',
-        puedeAcumularExtras: employee.puedeAcumularExtras !== undefined ? employee.puedeAcumularExtras : true
+        puedeAcumularExtras: employee.puedeAcumularExtras !== undefined ? employee.puedeAcumularExtras : true,
+        fechaInicioLabores: employee.fechaInicioLabores ? employee.fechaInicioLabores.split('T')[0] : ''
       });
     } else {
       setEditingEmployee(null);
@@ -90,7 +92,8 @@ export default function AdminEmployees() {
         enVacaciones: false,
         vacacionesInicio: '',
         vacacionesFin: '',
-        puedeAcumularExtras: true
+        puedeAcumularExtras: true,
+        fechaInicioLabores: ''
       });
     }
     setIsModalOpen(true);
@@ -363,6 +366,17 @@ export default function AdminEmployees() {
                     >
                       {formData.horarios.map(h => <option key={h.id} value={h.id}>{h.nombre}</option>)}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Inicio de Labores</label>
+                    <input
+                      required
+                      type="date"
+                      value={formValues.fechaInicioLabores}
+                      onChange={e => setFormValues({ ...formValues, fechaInicioLabores: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                    />
                   </div>
 
                   <div className="col-span-1 md:col-span-2 flex flex-col mt-2 space-y-4">

@@ -190,7 +190,7 @@ const createUser = async (req, res) => {
     const { 
       documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
       horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor,
-      enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras
+      enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras, fechaInicioLabores
     } = req.body;
 
     const hashedPassword = await bcrypt.hash(contrasena, 10);
@@ -211,7 +211,8 @@ const createUser = async (req, res) => {
       enVacaciones: Boolean(enVacaciones),
       vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
       vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null,
-      puedeAcumularExtras: puedeAcumularExtras !== undefined ? Boolean(puedeAcumularExtras) : true
+      puedeAcumularExtras: puedeAcumularExtras !== undefined ? Boolean(puedeAcumularExtras) : true,
+      fechaInicioLabores: fechaInicioLabores ? new Date(fechaInicioLabores) : null
     };
 
     const nuevoUsuario = await prisma.usuario.create({
@@ -234,7 +235,7 @@ const updateUser = async (req, res) => {
     const { 
       documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
       horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64,
-      enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras
+      enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras, fechaInicioLabores
     } = req.body;
 
     let dataToUpdate = {
@@ -249,7 +250,8 @@ const updateUser = async (req, res) => {
       horaFinAlmuerzo: horaFinAlmuerzo || null,
       enVacaciones: Boolean(enVacaciones),
       vacacionesInicio: vacacionesInicio ? new Date(vacacionesInicio) : null,
-      vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null
+      vacacionesFin: vacacionesFin ? new Date(vacacionesFin) : null,
+      fechaInicioLabores: fechaInicioLabores ? new Date(fechaInicioLabores) : null
     };
 
     if (puedeAcumularExtras !== undefined) {

@@ -97,6 +97,9 @@ model Usuario {
   vacacionesInicio   DateTime? @db.Date
   vacacionesFin      DateTime? @db.Date
 
+  // Fecha de inicio de labores (para bloquear accesos previos)
+  fechaInicioLabores DateTime? @db.Date
+
   // Permisos adicionales
   puedeAcumularExtras Boolean @default(true)
 

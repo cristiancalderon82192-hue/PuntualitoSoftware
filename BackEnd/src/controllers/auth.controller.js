@@ -30,6 +30,17 @@ const login = async (req, res) => {
       return res.status(403).json({ error: 'El usuario está desactivado' });
     }
 
+    if (usuario.fechaInicioLabores) {
+      const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
+      const fechaInicio = dayjs(usuario.fechaInicioLabores).tz(EMPRESA_TZ).startOf('day');
+      const hoyTz = dayjs().tz(EMPRESA_TZ).startOf('day');
+      
+      if (hoyTz.isBefore(fechaInicio)) {
+        const fechaFormateada = fechaInicio.format('DD/MM/YYYY');
+        return res.status(403).json({ error: `Tu acceso estará habilitado a partir del ${fechaFormateada}.` });
+      }
+    }
+
     if (usuario.rol.nombre === 'EMPLEADO' && usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
       const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
       const inicio = dayjs(usuario.vacacionesInicio).tz(EMPRESA_TZ).startOf('day');
@@ -107,6 +118,17 @@ const loginEmpleado = async (req, res) => {
 
     if (usuario.rol.nombre !== 'EMPLEADO') {
       return res.status(403).json({ error: 'Este acceso es exclusivo para empleados' });
+    }
+
+    if (usuario.fechaInicioLabores) {
+      const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
+      const fechaInicio = dayjs(usuario.fechaInicioLabores).tz(EMPRESA_TZ).startOf('day');
+      const hoyTz = dayjs().tz(EMPRESA_TZ).startOf('day');
+      
+      if (hoyTz.isBefore(fechaInicio)) {
+        const fechaFormateada = fechaInicio.format('DD/MM/YYYY');
+        return res.status(403).json({ error: `Tu acceso estará habilitado a partir del ${fechaFormateada}.` });
+      }
     }
 
     if (usuario.enVacaciones && usuario.vacacionesInicio && usuario.vacacionesFin) {
