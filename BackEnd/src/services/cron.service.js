@@ -132,6 +132,67 @@ const startCronJobs = () => {
     timezone: EMPRESA_TZ
   });
 
+  // 1.5. Ejecutar de Lunes a Sábado a las 19:00 (Auto-salida para quienes no acumulan extras)
+  cron.schedule('0 19 * * 1-6', async () => {
+    console.log('[CRON] Iniciando proceso de auto-salida (19:00)...', new Date());
+    
+    try {
+      const hoyStr = dayjs.tz().format('YYYY-MM-DD');
+      const hoy = new Date(hoyStr + 'T00:00:00.000Z');
+
+      if (dayjs.tz().day() === 0 || hd.isHoliday(new Date(hoyStr + 'T12:00:00Z'))) {
+        return;
+      }
+
+      const asistenciasPendientes = await prisma.asistencia.findMany({
+        where: {
+          fecha: hoy,
+          horaSalida: null,
+          usuario: {
+            puedeAcumularExtras: false,
+            rol: { nombre: 'EMPLEADO' },
+            activo: true
+          }
+        },
+        include: {
+          usuario: {
+            include: { horario: true }
+          }
+        }
+      });
+
+      let autoSalidasMarcadas = 0;
+
+      for (const asistencia of asistenciasPendientes) {
+        if (asistencia.usuario.horario && asistencia.usuario.horario.horaFin) {
+          const horaFinStr = asistencia.usuario.horario.horaFin; 
+          
+          const fullDateSalidaObj = dayjs.tz(`${hoyStr}T${horaFinStr}`).toDate();
+          
+          let observaciones = asistencia.observaciones || '';
+          observaciones += '\n[Sistema] Salida marcada automáticamente a la hora de fin de turno asignada.';
+          
+          await prisma.asistencia.update({
+            where: { id: asistencia.id },
+            data: {
+              horaSalida: fullDateSalidaObj,
+              observaciones: observaciones.trim()
+            }
+          });
+          autoSalidasMarcadas++;
+        }
+      }
+
+      console.log(`[CRON] Auto-salida completada. Registros actualizados: ${autoSalidasMarcadas}.`);
+      
+    } catch (error) {
+      console.error('[CRON] Error al ejecutar auto-salida:', error);
+    }
+  }, {
+    scheduled: true,
+    timezone: EMPRESA_TZ
+  });
+
   // 2. Auto-Ping cada 14 minutos para mantener Render despierto (solo en producción)
   cron.schedule('*/14 * * * *', async () => {
     // RENDER_EXTERNAL_URL es proporcionada automáticamente por Render
