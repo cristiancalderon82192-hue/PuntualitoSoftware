@@ -19,16 +19,17 @@ const startCronJobs = () => {
     console.log('[CRON] Iniciando proceso de verificación de ausencias...', new Date());
     
     try {
-      const hoy = new Date(dayjs.tz().format('YYYY-MM-DD') + 'T00:00:00.000Z');
+      const hoyStr = dayjs.tz().format('YYYY-MM-DD');
+      const hoy = new Date(hoyStr + 'T00:00:00.000Z');
 
       // Validación adicional: si es domingo (0), no hacer nada
-      if (dayjs(hoy).tz().day() === 0) {
+      if (dayjs.tz().day() === 0) {
         console.log('[CRON] Hoy es domingo, se omite la verificación de ausencias.');
         return;
       }
 
       // Validación adicional: si es festivo en Colombia, no hacer nada
-      if (hd.isHoliday(hoy)) {
+      if (hd.isHoliday(new Date(hoyStr + 'T12:00:00Z'))) {
         console.log(`[CRON] Hoy es festivo, se omite la verificación de ausencias.`);
         return;
       }
@@ -185,16 +186,17 @@ const checkPastAbsences = async (daysBack = 15) => {
     let totalVacacionesRetroactivos = 0;
 
     for (let i = 1; i <= daysBack; i++) {
-      const fechaCheckStr = dayjs.tz().subtract(i, 'day').format('YYYY-MM-DD');
+      const fechaCheckTz = dayjs.tz().subtract(i, 'day');
+      const fechaCheckStr = fechaCheckTz.format('YYYY-MM-DD');
       const fechaObj = new Date(fechaCheckStr + 'T00:00:00.000Z');
 
       // Omitir la validación si la fecha a evaluar es domingo
-      if (dayjs(fechaObj).tz().day() === 0) {
+      if (fechaCheckTz.day() === 0) {
         continue;
       }
 
       // Omitir la validación si la fecha a evaluar es festivo en Colombia
-      if (hd.isHoliday(fechaObj)) {
+      if (hd.isHoliday(new Date(fechaCheckStr + 'T12:00:00Z'))) {
         continue;
       }
 
