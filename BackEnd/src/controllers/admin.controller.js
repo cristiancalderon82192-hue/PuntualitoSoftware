@@ -81,14 +81,14 @@ const getDashboardStats = async (req, res) => {
       estado: { nombre: 'AUSENTE' }
     }));
 
-    // 5. Registros Recientes (Paginados con take: 10, excluyendo ausencias automáticas/manuales)
+    // 5. Registros Recientes (Paginados con take: 50, excluyendo ausencias automáticas/manuales)
     const registrosRecientes = await prisma.asistencia.findMany({
       where: {
         fecha: hoy,
         usuario: { rol: { nombre: 'EMPLEADO' } },
         estado: { nombre: { not: 'AUSENTE' } }
       },
-      take: 10,
+      take: 50,
       include: {
         usuario: {
           select: { id: true, nombre: true, apellido: true }
