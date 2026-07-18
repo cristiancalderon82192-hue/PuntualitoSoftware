@@ -61,6 +61,9 @@ const getAttendanceStatus = async (req, res) => {
     }
 
     if (asistencia.estado?.nombre === 'AUSENTE') {
+      if (!asistencia.horaEntrada) {
+        return res.json({ status: 'PENDIENTE_ENTRADA', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, causasTardanza });
+      }
       return res.json({ status: 'AUSENTE', asistencia, tieneAlmuerzo, sede: infoSede, timeLimits, causasTardanza });
     }
 
@@ -137,12 +140,13 @@ const checkIn = async (req, res) => {
 
     const hoy = new Date(dayjs.tz().format('YYYY-MM-DD') + 'T00:00:00.000Z');
     const asistenciaExistente = await prisma.asistencia.findFirst({
-      where: { usuarioId, fecha: hoy }
+      where: { usuarioId, fecha: hoy },
+      include: { estado: true }
     });
 
     const horario = usuario.horario;
     if (action === 'ENTRADA') {
-      if (asistenciaExistente) return res.status(400).json({ error: 'Ya registraste tu llegada hoy' });
+      if (asistenciaExistente && asistenciaExistente.horaEntrada) return res.status(400).json({ error: 'Ya registraste tu llegada hoy' });
       if (!horario) return res.status(400).json({ error: 'No tienes un horario asignado. Contacta al administrador.' });
 
       const horaActualStr = dayjs.tz().format('HH:mm:ss');
@@ -160,19 +164,36 @@ const checkIn = async (req, res) => {
       
       const estadoObj = await prisma.estadoAsistencia.findUnique({ where: { nombre: estadoAsistencia } });
 
-      const nuevaAsistencia = await prisma.asistencia.create({
-        data: {
-          fecha: hoy,
-          horaEntrada: new Date(),
-          latitudEntrada: latitud,
-          longitudEntrada: longitud,
-          usuarioId,
-          sedeId: sedeDetectada.id,
-          estadoId: estadoObj.id,
-          minutosTarde
-        },
-        include: { estado: true }
-      });
+      let nuevaAsistencia;
+      if (asistenciaExistente) {
+        nuevaAsistencia = await prisma.asistencia.update({
+          where: { id: asistenciaExistente.id },
+          data: {
+            horaEntrada: new Date(),
+            latitudEntrada: latitud,
+            longitudEntrada: longitud,
+            sedeId: sedeDetectada.id,
+            estadoId: estadoObj.id,
+            minutosTarde,
+            observaciones: null
+          },
+          include: { estado: true }
+        });
+      } else {
+        nuevaAsistencia = await prisma.asistencia.create({
+          data: {
+            fecha: hoy,
+            horaEntrada: new Date(),
+            latitudEntrada: latitud,
+            longitudEntrada: longitud,
+            usuarioId,
+            sedeId: sedeDetectada.id,
+            estadoId: estadoObj.id,
+            minutosTarde
+          },
+          include: { estado: true }
+        });
+      }
 
       return res.status(201).json({
         mensaje: `Entrada registrada. Estado: ${estadoAsistencia}`,

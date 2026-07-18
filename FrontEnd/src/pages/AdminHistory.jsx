@@ -14,10 +14,11 @@ export default function AdminHistory() {
   const [sedes, setSedes] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [isRangeMode, setIsRangeMode] = useState(false);
   // Filters state
   const [filters, setFilters] = useState({
-    fechaInicio: dayjs().startOf('month').format('YYYY-MM-DD'),
-    fechaFin: dayjs().endOf('month').format('YYYY-MM-DD'),
+    fechaInicio: dayjs().format('YYYY-MM-DD'),
+    fechaFin: dayjs().format('YYYY-MM-DD'),
     usuarioId: '',
     sedeId: ''
   });
@@ -110,7 +111,13 @@ export default function AdminHistory() {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters(prev => {
+      const newFilters = { ...prev, [name]: value };
+      if (!isRangeMode && name === 'fechaInicio') {
+        newFilters.fechaFin = value;
+      }
+      return newFilters;
+    });
   };
 
   const processedAttendances = attendances;
@@ -714,7 +721,23 @@ export default function AdminHistory() {
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 mb-6">
           <form onSubmit={handleApplyFilters} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Inicio</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-slate-700">{isRangeMode ? 'Fecha Inicio' : 'Fecha'}</label>
+                <label className="flex items-center space-x-1 cursor-pointer select-none" title="Activar rango de fechas">
+                  <input
+                    type="checkbox"
+                    checked={isRangeMode}
+                    onChange={(e) => {
+                      setIsRangeMode(e.target.checked);
+                      if (!e.target.checked) {
+                        setFilters(prev => ({ ...prev, fechaFin: prev.fechaInicio }));
+                      }
+                    }}
+                    className="rounded border-slate-300 text-slate-800 focus:ring-slate-500 w-3.5 h-3.5"
+                  />
+                  <span className="text-[11px] text-slate-500 font-medium">Rango</span>
+                </label>
+              </div>
               <div className="relative">
                 <Calendar className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input 
@@ -727,19 +750,23 @@ export default function AdminHistory() {
               </div>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Fin</label>
-              <div className="relative">
-                <Calendar className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                <input 
-                  type="date" 
-                  name="fechaFin"
-                  value={filters.fechaFin}
-                  onChange={handleFilterChange}
-                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none text-sm text-slate-600"
-                />
+            {isRangeMode ? (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Fin</label>
+                <div className="relative">
+                  <Calendar className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <input 
+                    type="date" 
+                    name="fechaFin"
+                    value={filters.fechaFin}
+                    onChange={handleFilterChange}
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none text-sm text-slate-600"
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="hidden md:block"></div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Empleado</label>

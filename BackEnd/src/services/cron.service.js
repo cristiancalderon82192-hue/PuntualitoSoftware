@@ -14,8 +14,8 @@ const EMPRESA_TZ = process.env.TZ || 'America/Bogota';
 dayjs.tz.setDefault(EMPRESA_TZ);
 
 const startCronJobs = () => {
-  // 1. Ejecutar de Lunes a Sábado a las 23:59 (Verificación diaria de ausencias, omitiendo domingos)
-  cron.schedule('59 23 * * 1-6', async () => {
+  // 1. Ejecutar de Lunes a Sábado a las 00:05 (Creación diaria de ausencias, omitiendo domingos)
+  cron.schedule('5 0 * * 1-6', async () => {
     console.log('[CRON] Iniciando proceso de verificación de ausencias...', new Date());
     
     try {
