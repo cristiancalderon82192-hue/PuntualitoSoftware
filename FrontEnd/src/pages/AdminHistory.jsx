@@ -1823,9 +1823,10 @@ export default function AdminHistory() {
                   <input
                     type="time"
                     required
+                    disabled={!!manualEntryAttendance.latitudEntrada}
                     value={manualEntryTime}
                     onChange={(e) => setManualEntryTime(e.target.value)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>

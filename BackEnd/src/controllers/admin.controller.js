@@ -450,33 +450,44 @@ const updateManualEntry = async (req, res) => {
       return res.status(400).json({ error: 'El usuario no tiene horario asignado' });
     }
 
-    // Calcular estado
-    const horaIngresoStr = `${horaEntrada}:00`;
-    // Add timezone handling since it will be compared to shift times in EMPRESA_TZ
-    const datePrefix = dayjs().format('YYYY-MM-DD'); // dayjs handles current date for diffing times correctly
-    const limitePuntual = dayjs.tz(`${datePrefix}T${horario.horaInicio}`).add(horario.minutosTolerancia, 'minute');
-    const actualIngreso = dayjs.tz(`${datePrefix}T${horaIngresoStr}`);
+    const isEmployeeEntry = !!asistencia.latitudEntrada;
     
-    const isTarde = actualIngreso.isAfter(limitePuntual);
-    const estadoAsistencia = isTarde ? 'TARDE' : 'PUNTUAL';
-    
-    let minutosTarde = 0;
-    if (isTarde) {
-      const horaInicioObj = dayjs.tz(`${datePrefix}T${horario.horaInicio}`);
-      minutosTarde = actualIngreso.diff(horaInicioObj, 'minute');
-      if (minutosTarde < 0) minutosTarde = 0;
+    let estadoId = asistencia.estadoId;
+    let minutosTarde = asistencia.minutosTarde;
+    let fullDateObj = asistencia.horaEntrada;
+    let observaciones = asistencia.observaciones || '';
+
+    // Solo actualizamos horaEntrada si NO fue hecha por el empleado (por GPS)
+    if (!isEmployeeEntry && horaEntrada) {
+      const horaIngresoStr = `${horaEntrada}:00`;
+      const datePrefix = dayjs().format('YYYY-MM-DD'); 
+      const limitePuntual = dayjs.tz(`${datePrefix}T${horario.horaInicio}`).add(horario.minutosTolerancia, 'minute');
+      const actualIngreso = dayjs.tz(`${datePrefix}T${horaIngresoStr}`);
+      
+      const isTarde = actualIngreso.isAfter(limitePuntual);
+      const estadoAsistencia = isTarde ? 'TARDE' : 'PUNTUAL';
+      
+      if (isTarde) {
+        const horaInicioObj = dayjs.tz(`${datePrefix}T${horario.horaInicio}`);
+        minutosTarde = actualIngreso.diff(horaInicioObj, 'minute');
+        if (minutosTarde < 0) minutosTarde = 0;
+      }
+
+      const estadoObj = await prisma.estadoAsistencia.findUnique({ where: { nombre: estadoAsistencia } });
+      estadoId = estadoObj.id;
+
+      const fechaOriginal = dayjs.utc(asistencia.fecha).format('YYYY-MM-DD');
+      fullDateObj = dayjs.tz(`${fechaOriginal}T${horaIngresoStr}`).toDate();
+      
+      observaciones = `Ingreso manual por admin: Entrada ${horaEntrada}.`;
     }
 
-    const estadoObj = await prisma.estadoAsistencia.findUnique({ where: { nombre: estadoAsistencia } });
-
-    // The Date object to save should match the specific date of the attendance record
-    const fechaOriginal = dayjs.utc(asistencia.fecha).format('YYYY-MM-DD');
-    const fullDateObj = dayjs.tz(`${fechaOriginal}T${horaIngresoStr}`).toDate();
-    
-    let fullDateSalidaObj = null;
+    let fullDateSalidaObj = asistencia.horaSalida;
     if (horaSalida) {
+      const fechaOriginal = dayjs.utc(asistencia.fecha).format('YYYY-MM-DD');
       const horaSalidaStr = `${horaSalida}:00`;
       fullDateSalidaObj = dayjs.tz(`${fechaOriginal}T${horaSalidaStr}`).toDate();
+      observaciones += `\nSalida agregada por admin: ${horaSalida}.`;
     }
 
     const updatedAsistencia = await prisma.asistencia.update({
@@ -484,9 +495,9 @@ const updateManualEntry = async (req, res) => {
       data: {
         horaEntrada: fullDateObj,
         horaSalida: fullDateSalidaObj,
-        estadoId: estadoObj.id,
+        estadoId,
         minutosTarde,
-        observaciones: `Ingreso manual por admin: Entrada ${horaEntrada}${horaSalida ? `, Salida ${horaSalida}` : ''}.`
+        observaciones: observaciones.trim()
       }
     });
 
