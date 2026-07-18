@@ -1029,11 +1029,12 @@ export default function AdminHistory() {
                               href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
+                              download={`Evidencia_Justificacion_${dayjs(a.fecha).format('YYYYMMDD')}`}
                               className="mt-2 inline-flex items-center space-x-1 p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors text-xs font-medium border border-blue-200"
-                              title="Ver evidencia"
+                              title="Descargar evidencia"
                             >
-                              <ImageIcon className="w-3 h-3" />
-                              <span>Ver Evidencia</span>
+                              <Download className="w-3 h-3" />
+                              <span>Descargar Evidencia</span>
                             </a>
                           )}
                         </td>
