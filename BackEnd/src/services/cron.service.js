@@ -17,7 +17,7 @@ const startCronJobs = () => {
   // 1. Ejecutar de Lunes a Sábado a las 00:05 (Creación diaria de ausencias, omitiendo domingos)
   cron.schedule('5 0 * * 1-6', async () => {
     console.log('[CRON] Iniciando proceso de verificación de ausencias...', new Date());
-    
+
     try {
       const hoyStr = dayjs.tz().format('YYYY-MM-DD');
       const hoy = new Date(hoyStr + 'T00:00:00.000Z');
@@ -56,7 +56,7 @@ const startCronJobs = () => {
 
       // Obtener usuarios activos que sean empleados
       const usuariosActivos = await prisma.usuario.findMany({
-        where: { 
+        where: {
           activo: true,
           rol: { nombre: 'EMPLEADO' }
         }
@@ -123,7 +123,7 @@ const startCronJobs = () => {
       }
 
       console.log(`[CRON] Verificación completada. Ausentes: ${ausentesMarcados}, Vacaciones: ${vacacionesMarcadas}.`);
-      
+
     } catch (error) {
       console.error('[CRON] Error al verificar ausencias:', error);
     }
@@ -135,7 +135,7 @@ const startCronJobs = () => {
   // 1.5. Ejecutar de Lunes a Sábado a las 19:00 (Auto-salida para quienes no acumulan extras)
   cron.schedule('0 19 * * 1-6', async () => {
     console.log('[CRON] Iniciando proceso de auto-salida (19:00)...', new Date());
-    
+
     try {
       const hoyStr = dayjs.tz().format('YYYY-MM-DD');
       const hoy = new Date(hoyStr + 'T00:00:00.000Z');
@@ -165,10 +165,10 @@ const startCronJobs = () => {
 
       for (const asistencia of asistenciasPendientes) {
         if (asistencia.usuario.horario && asistencia.usuario.horario.horaFin) {
-          const horaFinStr = asistencia.usuario.horario.horaFin; 
-          
+          const horaFinStr = asistencia.usuario.horario.horaFin;
+
           const fullDateSalidaObj = dayjs.tz(`${hoyStr}T${horaFinStr}`).toDate();
-          
+
           let observaciones = asistencia.observaciones || '';
           observaciones += '\n[Sistema] Salida marcada automáticamente a la hora de fin de turno asignada.';
           
@@ -184,7 +184,7 @@ const startCronJobs = () => {
       }
 
       console.log(`[CRON] Auto-salida completada. Registros actualizados: ${autoSalidasMarcadas}.`);
-      
+
     } catch (error) {
       console.error('[CRON] Error al ejecutar auto-salida:', error);
     }
@@ -197,7 +197,7 @@ const startCronJobs = () => {
   cron.schedule('*/14 * * * *', async () => {
     // RENDER_EXTERNAL_URL es proporcionada automáticamente por Render
     const url = process.env.RENDER_EXTERNAL_URL || process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
-    
+
     // Solo hacemos ping si realmente estamos en la nube (o si hay URL externa)
     if (process.env.RENDER_EXTERNAL_URL || process.env.SERVER_URL) {
       try {
@@ -214,7 +214,7 @@ const checkPastAbsences = async (daysBack = 15) => {
   // Deshabilitado temporalmente a petición del usuario para evitar llenar de ausentismos viejos.
   console.log('[STARTUP] La verificación de inasistencias pasadas está deshabilitada.');
   return;
-  
+
   console.log(`[STARTUP] Verificando inasistencias pasadas (últimos ${daysBack} días)...`);
   try {
     // Asegurar estado VACACIONES en verificación retroactiva
@@ -237,7 +237,7 @@ const checkPastAbsences = async (daysBack = 15) => {
     }
 
     const usuariosActivos = await prisma.usuario.findMany({
-      where: { 
+      where: {
         activo: true,
         rol: { nombre: 'EMPLEADO' }
       }
