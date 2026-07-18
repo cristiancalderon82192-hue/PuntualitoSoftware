@@ -467,23 +467,39 @@ export default function AdminHistory() {
     }
   };
 
+  const generateMultiPagePDF = async (element, filename, orientation = 'p') => {
+    const imgData = await toPng(element, { 
+      backgroundColor: '#ffffff',
+      pixelRatio: 2
+    });
+    
+    const pdf = new jsPDF(orientation, 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    
+    let heightLeft = pdfHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - pdfHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+    }
+    
+    pdf.save(filename);
+  };
+
   const handleExportPDF = async () => {
     if (!reportRef.current) return;
     setIsExportingPDF(true);
     try {
-      const element = reportRef.current;
-      const imgData = await toPng(element, { 
-        backgroundColor: '#ffffff',
-        pixelRatio: 2
-      });
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Reporte_Tardanzas_${dayjs().format('YYYYMMDD')}.pdf`);
+      await generateMultiPagePDF(reportRef.current, `Reporte_Tardanzas_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
     } catch (error) {
       console.error('Error al generar PDF', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
@@ -496,19 +512,7 @@ export default function AdminHistory() {
     if (!reportAusentismosRef.current) return;
     setIsExportingPDFAusentismos(true);
     try {
-      const element = reportAusentismosRef.current;
-      const imgData = await toPng(element, { 
-        backgroundColor: '#ffffff',
-        pixelRatio: 2
-      });
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Reporte_Ausentismos_${dayjs().format('YYYYMMDD')}.pdf`);
+      await generateMultiPagePDF(reportAusentismosRef.current, `Reporte_Ausentismos_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
     } catch (error) {
       console.error('Error al generar PDF Ausentismos', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
@@ -521,21 +525,9 @@ export default function AdminHistory() {
     if (!reportDetalleRef.current) return;
     setIsExportingPDFDetalle(true);
     try {
-      const element = reportDetalleRef.current;
-      const imgData = await toPng(element, { 
-        backgroundColor: '#ffffff',
-        pixelRatio: 2
-      });
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       const emp = users.find(u => u.id === selectedEmployeeDetails);
       const empName = emp ? emp.nombre : 'Empleado';
-      pdf.save(`Detalle_Asistencia_${empName}_${dayjs().format('YYYYMMDD')}.pdf`);
+      await generateMultiPagePDF(reportDetalleRef.current, `Detalle_Asistencia_${empName}_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
     } catch (error) {
       console.error('Error al generar PDF Detalle', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
@@ -548,19 +540,7 @@ export default function AdminHistory() {
     if (!reportPuntualesRef.current) return;
     setIsExportingPDFPuntuales(true);
     try {
-      const element = reportPuntualesRef.current;
-      const imgData = await toPng(element, { 
-        backgroundColor: '#ffffff',
-        pixelRatio: 2
-      });
-      
-      const pdf = new jsPDF('l', 'mm', 'a4'); // Apaisado (landscape)
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Ranking_Puntualidad_${dayjs().format('YYYYMMDD')}.pdf`);
+      await generateMultiPagePDF(reportPuntualesRef.current, `Ranking_Puntualidad_${dayjs().format('YYYYMMDD')}.pdf`, 'l');
     } catch (error) {
       console.error('Error al generar PDF Puntualidad', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
@@ -573,19 +553,7 @@ export default function AdminHistory() {
     if (!reportGeneralRef.current) return;
     setIsExportingPDFGeneral(true);
     try {
-      const element = reportGeneralRef.current;
-      const imgData = await toPng(element, { 
-        backgroundColor: '#ffffff',
-        pixelRatio: 2
-      });
-      
-      const pdf = new jsPDF('l', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Reporte_${activeTab}_${dayjs().format('YYYYMMDD')}.pdf`);
+      await generateMultiPagePDF(reportGeneralRef.current, `Reporte_${activeTab}_${dayjs().format('YYYYMMDD')}.pdf`, 'l');
     } catch (error) {
       console.error('Error al generar PDF', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
@@ -598,21 +566,9 @@ export default function AdminHistory() {
     if (!reportLunchDetalleRef.current) return;
     setIsExportingPDFLunchDetalle(true);
     try {
-      const element = reportLunchDetalleRef.current;
-      const imgData = await toPng(element, { 
-        backgroundColor: '#ffffff',
-        pixelRatio: 2
-      });
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       const emp = users.find(u => u.id === selectedEmployeeLunchDetails);
       const empName = emp ? emp.nombre : 'Empleado';
-      pdf.save(`Detalle_Almuerzos_${empName}_${dayjs().format('YYYYMMDD')}.pdf`);
+      await generateMultiPagePDF(reportLunchDetalleRef.current, `Detalle_Almuerzos_${empName}_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
     } catch (error) {
       console.error('Error al generar PDF Detalle Almuerzos', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
