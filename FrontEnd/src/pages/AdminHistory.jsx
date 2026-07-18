@@ -400,7 +400,7 @@ export default function AdminHistory() {
 
   const isJustified = (obs) => {
     if (!obs) return false;
-    return obs !== 'ausentismo laboral' && obs !== 'Ausencia detectada por el sistema automático';
+    return obs.startsWith('Justificado:');
   };
 
   const handleExportExcel = () => {
