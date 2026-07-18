@@ -51,6 +51,12 @@ export default function AdminHistory() {
   const [manualEntryTime, setManualEntryTime] = useState('');
   const [manualExitTime, setManualExitTime] = useState('');
 
+  // Justification State
+  const [justifyingAttendance, setJustifyingAttendance] = useState(null);
+  const [justificationText, setJustificationText] = useState('');
+  const [justificationFile, setJustificationFile] = useState(null);
+  const [isSubmittingJustification, setIsSubmittingJustification] = useState(false);
+
   const loadFiltersData = async () => {
     try {
       const [usersRes, formRes] = await Promise.all([
@@ -362,6 +368,39 @@ export default function AdminHistory() {
     } catch (error) {
       alert('Error al guardar el ingreso manual');
     }
+  };
+
+  const handleJustifySubmit = async (e) => {
+    e.preventDefault();
+    if (!justifyingAttendance || !justificationText.trim()) return;
+    
+    setIsSubmittingJustification(true);
+    try {
+      const formData = new FormData();
+      formData.append('observaciones', 'Justificado: ' + justificationText);
+      formData.append('tipo', 'ENTRADA'); // Usa la rama principal de observaciones en el backend
+      if (justificationFile) {
+        formData.append('evidencia', justificationFile);
+      }
+
+      await api.patch(`/attendance/${justifyingAttendance.id}/justify`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setJustifyingAttendance(null);
+      setJustificationText('');
+      setJustificationFile(null);
+      loadAttendances();
+    } catch (error) {
+      alert('Error al guardar la justificación: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setIsSubmittingJustification(false);
+    }
+  };
+
+  const isJustified = (obs) => {
+    if (!obs) return false;
+    return obs !== 'ausentismo laboral' && obs !== 'Ausencia detectada por el sistema automático';
   };
 
   const handleExportExcel = () => {
@@ -971,16 +1010,45 @@ export default function AdminHistory() {
                           <p className="text-xs text-slate-500 font-mono">{a.usuario.documento} • {a.sede.nombre}</p>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
-                            FALTA INJUSTIFICADA
-                          </span>
+                          {isJustified(a.observaciones) ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-yellow-50 text-yellow-700 border-yellow-200">
+                              FALTA JUSTIFICADA
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-red-50 text-red-700 border-red-200">
+                              FALTA INJUSTIFICADA
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 max-w-md">
-                          <p className="text-slate-600 italic text-xs border-l-2 border-red-200 pl-2">
+                          <p className={`italic text-xs border-l-2 pl-2 ${isJustified(a.observaciones) ? 'text-yellow-700 border-yellow-300' : 'text-slate-600 border-red-200'}`}>
                             {a.observaciones || 'Ausencia detectada por el sistema automático'}
                           </p>
+                          {a.evidenciaUrl && (
+                            <a
+                              href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 inline-flex items-center space-x-1 p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors text-xs font-medium border border-blue-200"
+                              title="Ver evidencia"
+                            >
+                              <ImageIcon className="w-3 h-3" />
+                              <span>Ver Evidencia</span>
+                            </a>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setJustifyingAttendance(a);
+                              setJustificationText('');
+                              setJustificationFile(null);
+                            }}
+                            className="p-1.5 mr-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
+                            title="Justificar Falta"
+                          >
+                            <ClipboardList className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => {
                               setManualEntryAttendance(a);
@@ -1855,6 +1923,77 @@ export default function AdminHistory() {
                   className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
                 >
                   Guardar Ingreso
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Justificación de Ausentismo */}
+      {justifyingAttendance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800">
+                Justificar Ausentismo
+              </h3>
+              <button
+                onClick={() => setJustifyingAttendance(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleJustifySubmit} className="p-6 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-slate-700 mb-1">Empleado</p>
+                <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded border border-slate-100">
+                  {justifyingAttendance.usuario.nombre} {justifyingAttendance.usuario.apellido}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Motivo de la justificación *
+                </label>
+                <textarea
+                  required
+                  rows="3"
+                  value={justificationText}
+                  onChange={(e) => setJustificationText(e.target.value)}
+                  placeholder="Ej. Problema médico de última hora, permiso especial..."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-yellow-500 outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Evidencia Adjunta (Opcional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setJustificationFile(e.target.files[0])}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100"
+                />
+              </div>
+
+              <div className="pt-4 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setJustifyingAttendance(null)}
+                  className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingJustification}
+                  className="px-4 py-2 bg-yellow-600 text-white font-medium rounded-xl hover:bg-yellow-700 transition-colors shadow-sm disabled:opacity-70"
+                >
+                  {isSubmittingJustification ? 'Guardando...' : 'Guardar Justificación'}
                 </button>
               </div>
             </form>
