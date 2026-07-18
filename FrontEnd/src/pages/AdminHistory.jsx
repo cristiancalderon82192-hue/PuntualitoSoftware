@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import api from '../services/api';
 import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2, Award, Edit, FileText } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -90,30 +90,9 @@ export default function AdminHistory() {
     }
   };
 
-  const loadReportData = async () => {
-    try {
-      const res = await api.get('/admin/reports/tardanzas');
-      // Sort by count descending
-      const sorted = res.data.sort((a, b) => b.count - a.count);
-      setReportData(sorted);
-    } catch (error) {
-      console.error('Error cargando reporte de tardanzas:', error);
-    } finally {
-      setLoadingReport(false);
-    }
-  };
-
   useEffect(() => {
     loadFiltersData();
     loadAttendances();
-    loadReportData();
-
-    // Polling cada 10 segundos
-    const interval = setInterval(() => {
-      loadReportData();
-    }, 10000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   const handleFilterChange = (e) => {
@@ -131,6 +110,23 @@ export default function AdminHistory() {
   const filteredAttendances = activeTab === 'reporte_almuerzos'
     ? processedAttendances.filter(a => a.horaSalidaAlmuerzo)
     : processedAttendances;
+
+  const dynamicReportData = useMemo(() => {
+    const counts = {};
+    
+    processedAttendances.forEach(t => {
+      if (t.causaTardanza) {
+        counts[t.causaTardanza] = (counts[t.causaTardanza] || 0) + 1;
+      }
+      if (t.causaTardanzaAlmuerzo) {
+        counts[t.causaTardanzaAlmuerzo] = (counts[t.causaTardanzaAlmuerzo] || 0) + 1;
+      }
+    });
+
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [processedAttendances]);
 
   const formatMinutes = (mins) => {
     if (!mins) return '0m';
@@ -922,25 +918,17 @@ export default function AdminHistory() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-bold text-slate-800">Causas de Llegadas Tarde</h3>
-                      <p className="text-sm text-slate-500">Global (Polling cada 10s)</p>
+                      <p className="text-sm text-slate-500">Filtrado por las fechas y parámetros de arriba</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                      </span>
-                      <span className="text-xs font-medium text-emerald-600">En Vivo</span>
+                      <span className="text-xs font-medium text-emerald-600">Sincronizado</span>
                     </div>
                   </div>
                   
                   <div className="flex-1 min-h-[250px] w-full">
-                    {loadingReport ? (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="w-8 h-8 border-4 border-slate-200 border-t-purple-600 rounded-full animate-spin"></div>
-                      </div>
-                    ) : reportData.length > 0 ? (
+                    {dynamicReportData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={reportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <BarChart data={dynamicReportData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
@@ -954,7 +942,7 @@ export default function AdminHistory() {
                             radius={[6, 6, 0, 0]}
                             animationDuration={1500}
                           >
-                            {reportData.map((entry, index) => (
+                            {dynamicReportData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#3b82f6'} />
                             ))}
                           </Bar>
