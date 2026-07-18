@@ -149,6 +149,7 @@ export default function AdminHistory() {
           sede: a.sede,
           diasAsistidos: 0,
           llegadasTarde: 0,
+          tardesAlmuerzo: 0,
           faltas: 0,
           vacaciones: 0,
           totalMinutosExtra: 0,
@@ -167,6 +168,7 @@ export default function AdminHistory() {
       }
 
       if (a.estado.nombre === 'TARDE') grouped[a.usuarioId].llegadasTarde++;
+      if (a.causaTardanzaAlmuerzo) grouped[a.usuarioId].tardesAlmuerzo++;
       if (a.minutosExtraAprobados) grouped[a.usuarioId].totalMinutosExtra += a.minutosExtraAprobados;
       if (a.minutosTarde) grouped[a.usuarioId].totalMinutosTarde += a.minutosTarde;
     });
