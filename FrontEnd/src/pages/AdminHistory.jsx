@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useRef } from 'react';
 
 export default function AdminHistory() {
@@ -467,41 +468,27 @@ export default function AdminHistory() {
     }
   };
 
-  const generateMultiPagePDF = async (element, filename, orientation = 'p') => {
-    const imgData = await toPng(element, { 
-      backgroundColor: '#ffffff',
-      pixelRatio: 2
-    });
-    
-    const pdf = new jsPDF(orientation, 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    
-    let heightLeft = pdfHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position = heightLeft - pdfHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-    }
-    
-    pdf.save(filename);
-  };
-
   const handleExportPDF = async () => {
-    if (!reportRef.current) return;
     setIsExportingPDF(true);
     try {
-      await generateMultiPagePDF(reportRef.current, `Reporte_Tardanzas_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
+      const doc = new jsPDF('p', 'mm', 'a4');
+      doc.text("Reporte de Tardanzas", 14, 15);
+      
+      const head = [["Fecha", "Empleado", "Documento", "Sede", "Entrada", "Min. Tarde", "Causa", "Observaciones"]];
+      const body = processedAttendances.filter(a => a.minutosTarde > 0).map(a => [
+        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        `${a.usuario.nombre} ${a.usuario.apellido}`,
+        a.usuario.documento,
+        a.sede.nombre,
+        a.horaEntrada ? dayjs(a.horaEntrada).format('hh:mm A') : 'N/A',
+        formatMinutes(a.minutosTarde),
+        a.causaTardanza || 'N/A',
+        a.observaciones || 'N/A'
+      ]);
+
+      autoTable(doc, { head, body, startY: 20, styles: { fontSize: 8 } });
+      doc.save(`Reporte_Tardanzas_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
-      console.error('Error al generar PDF', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDF(false);
@@ -509,12 +496,24 @@ export default function AdminHistory() {
   };
 
   const handleExportPDFAusentismos = async () => {
-    if (!reportAusentismosRef.current) return;
     setIsExportingPDFAusentismos(true);
     try {
-      await generateMultiPagePDF(reportAusentismosRef.current, `Reporte_Ausentismos_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
+      const doc = new jsPDF('p', 'mm', 'a4');
+      doc.text("Reporte de Ausentismos", 14, 15);
+      
+      const head = [["Fecha", "Empleado", "Documento", "Sede", "Estado", "Observaciones"]];
+      const body = processedAttendances.filter(a => a.estado.nombre === 'AUSENTE').map(a => [
+        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        `${a.usuario.nombre} ${a.usuario.apellido}`,
+        a.usuario.documento,
+        a.sede.nombre,
+        isJustified(a.observaciones) ? 'JUSTIFICADA' : 'INJUSTIFICADA',
+        a.observaciones || 'Ausencia detectada por el sistema automático'
+      ]);
+
+      autoTable(doc, { head, body, startY: 20, styles: { fontSize: 8 } });
+      doc.save(`Reporte_Ausentismos_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
-      console.error('Error al generar PDF Ausentismos', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDFAusentismos(false);
@@ -522,14 +521,28 @@ export default function AdminHistory() {
   };
 
   const handleExportPDFDetalle = async () => {
-    if (!reportDetalleRef.current) return;
     setIsExportingPDFDetalle(true);
     try {
+      const doc = new jsPDF('p', 'mm', 'a4');
       const emp = users.find(u => u.id === selectedEmployeeDetails);
       const empName = emp ? emp.nombre : 'Empleado';
-      await generateMultiPagePDF(reportDetalleRef.current, `Detalle_Asistencia_${empName}_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
+      doc.text(`Detalle de Asistencia: ${empName} ${emp ? emp.apellido : ''}`, 14, 15);
+      
+      const head = [["Fecha", "Entrada", "Salida Almuerzo", "Regreso Almuerzo", "Salida", "Hrs Extras", "Tardanzas"]];
+      const empAttendances = attendances.filter(a => a.usuarioId === selectedEmployeeDetails);
+      const body = empAttendances.map(a => [
+        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        a.horaEntrada ? dayjs(a.horaEntrada).format('hh:mm A') : 'N/A',
+        a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
+        a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
+        a.horaSalida ? dayjs(a.horaSalida).format('hh:mm A') : 'N/A',
+        formatMinutes(a.minutosExtra),
+        formatMinutes(a.minutosTarde)
+      ]);
+
+      autoTable(doc, { head, body, startY: 20, styles: { fontSize: 8 } });
+      doc.save(`Detalle_Asistencia_${empName}_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
-      console.error('Error al generar PDF Detalle', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDFDetalle(false);
@@ -537,12 +550,26 @@ export default function AdminHistory() {
   };
 
   const handleExportPDFPuntuales = async () => {
-    if (!reportPuntualesRef.current) return;
     setIsExportingPDFPuntuales(true);
     try {
-      await generateMultiPagePDF(reportPuntualesRef.current, `Ranking_Puntualidad_${dayjs().format('YYYYMMDD')}.pdf`, 'l');
+      const doc = new jsPDF('l', 'mm', 'a4');
+      doc.text("Ranking de Puntualidad", 14, 15);
+      
+      const head = [["Ranking", "Empleado", "Documento", "Sede", "Entrada", "Días Asist.", "Tardanzas", "Estado"]];
+      const body = consolidatedData.sort((a, b) => a.llegadasTarde - b.llegadasTarde).map((c, i) => [
+        `#${i + 1}`,
+        `${c.usuario.nombre} ${c.usuario.apellido}`,
+        c.usuario.documento,
+        c.sede.nombre,
+        "N/A", // We don't have this in consolidated easily
+        c.diasAsistidos.toString(),
+        c.llegadasTarde.toString(),
+        c.llegadasTarde === 0 ? "PUNTUAL" : "TARDE"
+      ]);
+
+      autoTable(doc, { head, body, startY: 20, styles: { fontSize: 8 } });
+      doc.save(`Ranking_Puntualidad_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
-      console.error('Error al generar PDF Puntualidad', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDFPuntuales(false);
@@ -550,12 +577,79 @@ export default function AdminHistory() {
   };
 
   const handleExportPDFGeneral = async () => {
-    if (!reportGeneralRef.current) return;
     setIsExportingPDFGeneral(true);
     try {
-      await generateMultiPagePDF(reportGeneralRef.current, `Reporte_${activeTab}_${dayjs().format('YYYYMMDD')}.pdf`, 'l');
+      const doc = new jsPDF('l', 'mm', 'a4');
+      
+      let title = "Reporte General de Asistencias";
+      if (activeTab === 'reporte_almuerzos') title = "Reporte de Almuerzos";
+      if (activeTab === 'consolidado') title = "Reporte Consolidado";
+      if (activeTab === 'consolidado_extras') title = "Consolidado Horas Extras";
+
+      doc.setFontSize(14);
+      doc.text(title, 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Periodo: ${dayjs(filters.fechaInicio).format('DD MMM, YYYY')} al ${dayjs(filters.fechaFin).format('DD MMM, YYYY')}`, 14, 22);
+
+      let head = [];
+      let body = [];
+
+      if (activeTab === 'general') {
+        head = [["Fecha", "Empleado", "Documento", "Sede", "Entrada", "Salida", "Hrs Extras", "Estado", "Observaciones"]];
+        body = processedAttendances.map(a => [
+          dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+          `${a.usuario.nombre} ${a.usuario.apellido}`,
+          a.usuario.documento,
+          a.sede.nombre,
+          a.horaEntrada ? dayjs(a.horaEntrada).format('hh:mm A') : 'N/A',
+          a.horaSalida ? dayjs(a.horaSalida).format('hh:mm A') : 'N/A',
+          formatMinutes(a.minutosExtra),
+          a.estado.nombre,
+          a.observaciones || 'Sin observaciones'
+        ]);
+      } else if (activeTab === 'reporte_almuerzos') {
+        head = [["Fecha", "Empleado", "Documento", "Sede", "Salida Almuerzo", "Regreso Almuerzo", "Estado", "Observaciones"]];
+        body = processedAttendances.map(a => [
+          dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+          `${a.usuario.nombre} ${a.usuario.apellido}`,
+          a.usuario.documento,
+          a.sede.nombre,
+          a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
+          a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
+          a.minutosTardeAlmuerzo > 0 ? 'TARDE' : (!a.horaSalidaAlmuerzo ? 'SIN REGISTRO' : 'PUNTUAL'),
+          a.observacionesAlmuerzo || 'Sin observaciones'
+        ]);
+      } else if (activeTab === 'consolidado') {
+        head = [["Empleado", "Documento", "Sede", "Días Asist.", "Llegadas Tarde", "Faltas", "Vacaciones", "Hrs Extras", "Tardanzas", "Balance"]];
+        body = consolidatedData.map(c => {
+          const balance = c.totalMinutosExtra - c.totalMinutosTarde;
+          return [
+            `${c.usuario.nombre} ${c.usuario.apellido}`,
+            c.usuario.documento,
+            c.sede.nombre,
+            c.diasAsistidos.toString(),
+            c.llegadasTarde.toString(),
+            c.faltas.toString(),
+            c.vacaciones.toString(),
+            formatMinutes(c.totalMinutosExtra),
+            formatMinutes(c.totalMinutosTarde),
+            balance === 0 ? '0m' : balance > 0 ? `+ ${formatMinutes(balance)}` : `- ${formatMinutes(Math.abs(balance))}`
+          ];
+        });
+      } else if (activeTab === 'consolidado_extras') {
+        head = [["Empleado", "Documento", "Sede", "Total Hrs Extras", "Estado Aprobación"]];
+        body = consolidatedData.map(c => [
+          `${c.usuario.nombre} ${c.usuario.apellido}`,
+          c.usuario.documento,
+          c.sede.nombre,
+          formatMinutes(c.totalMinutosExtra),
+          c.totalMinutosExtra > 0 ? 'Pendiente revisión' : 'Sin extras'
+        ]);
+      }
+
+      autoTable(doc, { head, body, startY: 28, styles: { fontSize: 8 }, headStyles: { fillColor: [51, 65, 85] } });
+      doc.save(`Reporte_${activeTab}_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
-      console.error('Error al generar PDF', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDFGeneral(false);
@@ -563,14 +657,26 @@ export default function AdminHistory() {
   };
 
   const handleExportPDFLunchDetalle = async () => {
-    if (!reportLunchDetalleRef.current) return;
     setIsExportingPDFLunchDetalle(true);
     try {
+      const doc = new jsPDF('p', 'mm', 'a4');
       const emp = users.find(u => u.id === selectedEmployeeLunchDetails);
       const empName = emp ? emp.nombre : 'Empleado';
-      await generateMultiPagePDF(reportLunchDetalleRef.current, `Detalle_Almuerzos_${empName}_${dayjs().format('YYYYMMDD')}.pdf`, 'p');
+      doc.text(`Detalle de Almuerzos: ${empName} ${emp ? emp.apellido : ''}`, 14, 15);
+      
+      const head = [["Fecha", "Salida Almuerzo", "Regreso Almuerzo", "Causa", "Observaciones"]];
+      const empAttendances = attendances.filter(a => a.usuarioId === selectedEmployeeLunchDetails);
+      const body = empAttendances.map(a => [
+        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
+        a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
+        a.causaTardanzaAlmuerzo || 'N/A',
+        a.observacionesAlmuerzo || 'N/A'
+      ]);
+
+      autoTable(doc, { head, body, startY: 20, styles: { fontSize: 8 } });
+      doc.save(`Detalle_Almuerzos_${empName}_${dayjs().format('YYYYMMDD')}.pdf`);
     } catch (error) {
-      console.error('Error al generar PDF Detalle Almuerzos', error);
       alert('Hubo un error al generar el PDF: ' + error.message);
     } finally {
       setIsExportingPDFLunchDetalle(false);
