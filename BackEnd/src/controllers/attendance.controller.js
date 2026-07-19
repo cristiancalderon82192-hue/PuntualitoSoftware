@@ -28,7 +28,7 @@ const getAttendanceStatus = async (req, res) => {
 
     const usuario = await prisma.usuario.findUnique({
       where: { id: usuarioId },
-      include: { horario: true, sede: true }
+      include: { sede: true }
     });
 
     const causasTardanza = await prisma.causaTardanza.findMany({
@@ -105,7 +105,7 @@ const checkIn = async (req, res) => {
 
     const usuario = await prisma.usuario.findUnique({
       where: { id: usuarioId },
-      include: { sede: true, horario: true }
+      include: { sede: true }
     });
 
     if (!usuario || !usuario.activo) {
