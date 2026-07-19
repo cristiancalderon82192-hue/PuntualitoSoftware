@@ -36,6 +36,24 @@ export default function AdminEmployees() {
   });
   const [formError, setFormError] = useState('');
 
+  const calculateTotalWeeklyHours = () => {
+    let totalMinutes = 0;
+    if (formValues.horarioDetalles) {
+      Object.values(formValues.horarioDetalles).forEach(day => {
+        if (day.laboral && day.inicio && day.fin) {
+          const [startH, startM] = day.inicio.split(':').map(Number);
+          const [endH, endM] = day.fin.split(':').map(Number);
+          let diff = (endH * 60 + endM) - (startH * 60 + startM);
+          if (diff < 0) diff += 24 * 60; // if shift crosses midnight
+          totalMinutes += diff;
+        }
+      });
+    }
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes}m`;
+  };
+
   const loadData = async () => {
     try {
       const [usersRes, formRes] = await Promise.all([
@@ -443,6 +461,12 @@ export default function AdminEmployees() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-4 flex justify-end items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                      <span className="text-sm font-medium text-slate-500 mr-3">Total de horas semanales asignadas:</span>
+                      <span className="text-lg font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-md border border-slate-200">
+                        {calculateTotalWeeklyHours()}
+                      </span>
                     </div>
                   </div>
 
