@@ -2,6 +2,10 @@ import { useEffect, useState, useMemo } from 'react';
 import api from '../services/api';
 import { Download, Search, Filter, Calendar, ClipboardList, Clock, Users, Eye, X, Trash2, Image as ImageIcon, BarChart2, Award, Edit, FileText } from 'lucide-react';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from 'recharts';
 import { toPng } from 'html-to-image';
@@ -411,7 +415,7 @@ export default function AdminHistory() {
 
       // Preparar datos para Excel
       const excelData = processedAttendances.map(a => ({
-        'Fecha': dayjs(a.fecha).add(5, 'hour').format('DD/MM/YYYY'), // Ajuste simple si fecha guarda midnight UTC
+        'Fecha': dayjs.utc(a.fecha).format('DD/MM/YYYY'), // Ajuste simple si fecha guarda midnight UTC
         'Entrada': a.horaEntrada ? dayjs(a.horaEntrada).format('hh:mm A') : 'N/A',
         'Salida Almuerzo': a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
         'Regreso Almuerzo': a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
@@ -474,7 +478,7 @@ export default function AdminHistory() {
       
       const head = [["Fecha", "Empleado", "Documento", "Sede", "Entrada", "Min. Tarde", "Causa", "Observaciones"]];
       const body = processedAttendances.filter(a => a.minutosTarde > 0).map(a => [
-        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        dayjs.utc(a.fecha).format('DD MMM, YYYY'),
         `${a.usuario.nombre} ${a.usuario.apellido}`,
         a.usuario.documento,
         a.sede.nombre,
@@ -501,7 +505,7 @@ export default function AdminHistory() {
       
       const head = [["Fecha", "Empleado", "Documento", "Sede", "Estado", "Observaciones"]];
       const body = processedAttendances.filter(a => a.estado.nombre === 'AUSENTE').map(a => [
-        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        dayjs.utc(a.fecha).format('DD MMM, YYYY'),
         `${a.usuario.nombre} ${a.usuario.apellido}`,
         a.usuario.documento,
         a.sede.nombre,
@@ -529,7 +533,7 @@ export default function AdminHistory() {
       const head = [["Fecha", "Entrada", "Salida Almuerzo", "Regreso Almuerzo", "Salida", "Hrs Extras", "Tardanzas"]];
       const empAttendances = attendances.filter(a => a.usuarioId === selectedEmployeeDetails);
       const body = empAttendances.map(a => [
-        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        dayjs.utc(a.fecha).format('DD MMM, YYYY'),
         a.horaEntrada ? dayjs(a.horaEntrada).format('hh:mm A') : 'N/A',
         a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
         a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
@@ -595,7 +599,7 @@ export default function AdminHistory() {
       if (activeTab === 'general') {
         head = [["Fecha", "Empleado", "Documento", "Sede", "Entrada", "Salida", "Hrs Extras", "Estado", "Observaciones"]];
         body = processedAttendances.map(a => [
-          dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+          dayjs.utc(a.fecha).format('DD MMM, YYYY'),
           `${a.usuario.nombre} ${a.usuario.apellido}`,
           a.usuario.documento,
           a.sede.nombre,
@@ -608,7 +612,7 @@ export default function AdminHistory() {
       } else if (activeTab === 'reporte_almuerzos') {
         head = [["Fecha", "Empleado", "Documento", "Sede", "Salida Almuerzo", "Regreso Almuerzo", "Estado", "Observaciones"]];
         body = processedAttendances.map(a => [
-          dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+          dayjs.utc(a.fecha).format('DD MMM, YYYY'),
           `${a.usuario.nombre} ${a.usuario.apellido}`,
           a.usuario.documento,
           a.sede.nombre,
@@ -665,7 +669,7 @@ export default function AdminHistory() {
       const head = [["Fecha", "Salida Almuerzo", "Regreso Almuerzo", "Causa", "Observaciones"]];
       const empAttendances = attendances.filter(a => a.usuarioId === selectedEmployeeLunchDetails);
       const body = empAttendances.map(a => [
-        dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY'),
+        dayjs.utc(a.fecha).format('DD MMM, YYYY'),
         a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : 'N/A',
         a.horaEntradaAlmuerzo ? dayjs(a.horaEntradaAlmuerzo).format('hh:mm A') : 'N/A',
         a.causaTardanzaAlmuerzo || 'N/A',
@@ -979,7 +983,7 @@ export default function AdminHistory() {
                     {processedAttendances.filter(a => a.estado.nombre === 'TARDE').map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
+                          <p className="font-medium text-slate-800">{dayjs.utc(a.fecha).format('DD MMM, YYYY')}</p>
                           <div className="flex flex-col space-y-1 mt-1">
                             {a.estado.nombre === 'TARDE' && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 w-fit">Entrada: {dayjs(a.horaEntrada).format('hh:mm A')}</span>}
                           </div>
@@ -1055,7 +1059,7 @@ export default function AdminHistory() {
                     {processedAttendances.filter(a => a.estado.nombre === 'AUSENTE').map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
+                          <p className="font-medium text-slate-800">{dayjs.utc(a.fecha).format('DD MMM, YYYY')}</p>
                         </td>
                         <td className="px-6 py-4">
                           <p className="font-medium text-slate-800">{a.usuario.nombre} {a.usuario.apellido}</p>
@@ -1477,7 +1481,7 @@ export default function AdminHistory() {
                       <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           {/* El campo fecha en la BD guarda UTC midnight, para mostrarlo sin offset, le sumamos las 5 horas o usamos add() para evitar bugs de zona local */}
-                          <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
+                          <p className="font-medium text-slate-800">{dayjs.utc(a.fecha).format('DD MMM, YYYY')}</p>
                         </td>
                         <td className="px-6 py-4">
                           <p className="font-medium text-slate-800">{a.usuario.nombre} {a.usuario.apellido}</p>
@@ -1663,7 +1667,7 @@ export default function AdminHistory() {
                     return (
                       <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <p className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</p>
+                          <p className="font-medium text-slate-800">{dayjs.utc(a.fecha).format('DD MMM, YYYY')}</p>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-xs space-y-1">
                           {a.horaEntrada && <p><span className="text-slate-400">Entrada:</span> <span className="font-medium text-slate-700">{dayjs(a.horaEntrada).format('hh:mm A')}</span></p>}
@@ -1800,7 +1804,7 @@ export default function AdminHistory() {
                       return (
                         <tr key={`lunch-${a.id}`} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="font-medium text-slate-800">{dayjs(a.fecha).add(5, 'hour').format('DD MMM, YYYY')}</span>
+                            <span className="font-medium text-slate-800">{dayjs.utc(a.fecha).format('DD MMM, YYYY')}</span>
                           </td>
                           <td className="px-4 py-3 text-center whitespace-nowrap">
                             <span className="text-sm font-medium text-slate-700">{a.horaSalidaAlmuerzo ? dayjs(a.horaSalidaAlmuerzo).format('hh:mm A') : '-'}</span>

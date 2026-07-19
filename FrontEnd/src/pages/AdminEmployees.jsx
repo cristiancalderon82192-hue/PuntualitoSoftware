@@ -6,7 +6,7 @@ import FaceScanner from '../components/FaceScanner';
 
 export default function AdminEmployees() {
   const [employees, setEmployees] = useState([]);
-  const [formData, setFormData] = useState({ roles: [], sedes: [], horarios: [] });
+  const [formData, setFormData] = useState({ roles: [], sedes: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -24,8 +24,8 @@ export default function AdminEmployees() {
     contrasena: '',
     rolId: '',
     sedeId: '',
-    sedeId: '',
-    horarioId: '',
+    horarioDetalles: {},
+    minutosTolerancia: 15,
     activo: true,
     rostroDescriptor: '',
     enVacaciones: false,
@@ -67,7 +67,8 @@ export default function AdminEmployees() {
         contrasena: '', // No mostrar la contraseña actual
         rolId: employee.rolId,
         sedeId: employee.sedeId,
-        horarioId: employee.horarioId,
+        horarioDetalles: employee.horarioDetalles || {},
+        minutosTolerancia: employee.minutosTolerancia !== undefined ? employee.minutosTolerancia : 15,
         activo: employee.activo,
         rostroDescriptor: employee.rostroDescriptor || '',
         enVacaciones: employee.enVacaciones || false,
@@ -86,7 +87,16 @@ export default function AdminEmployees() {
         contrasena: '',
         rolId: formData.roles[0]?.id || '',
         sedeId: formData.sedes[0]?.id || '',
-        horarioId: formData.horarios[0]?.id || '',
+        horarioDetalles: {
+          1: { laboral: true, inicio: '08:00', fin: '17:00' },
+          2: { laboral: true, inicio: '08:00', fin: '17:00' },
+          3: { laboral: true, inicio: '08:00', fin: '17:00' },
+          4: { laboral: true, inicio: '08:00', fin: '17:00' },
+          5: { laboral: true, inicio: '08:00', fin: '17:00' },
+          6: { laboral: true, inicio: '08:00', fin: '17:00' },
+          0: { laboral: false, inicio: '', fin: '' }
+        },
+        minutosTolerancia: 15,
         activo: true,
         rostroDescriptor: '',
         enVacaciones: false,
@@ -214,7 +224,7 @@ export default function AdminEmployees() {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm font-medium text-slate-700">{emp.sede.nombre}</p>
-                        <p className="text-xs text-slate-500">{emp.horario.nombre}</p>
+                        <p className="text-xs text-slate-500">Personalizado</p>
                       </td>
                       <td className="px-6 py-4">
                         <button
@@ -358,14 +368,82 @@ export default function AdminEmployees() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Horario Asignado</label>
-                    <select
-                      required value={formValues.horarioId}
-                      onChange={e => setFormValues({ ...formValues, horarioId: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none bg-white"
-                    >
-                      {formData.horarios.map(h => <option key={h.id} value={h.id}>{h.nombre}</option>)}
-                    </select>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Minutos de Tolerancia</label>
+                    <input
+                      required type="number" min="0"
+                      value={formValues.minutosTolerancia}
+                      onChange={e => setFormValues({ ...formValues, minutosTolerancia: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                    />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h4 className="font-medium text-slate-800 mb-4">Horario Personalizado por Día</h4>
+                    <div className="space-y-3">
+                      {[
+                        { id: 1, name: 'Lunes' },
+                        { id: 2, name: 'Martes' },
+                        { id: 3, name: 'Miércoles' },
+                        { id: 4, name: 'Jueves' },
+                        { id: 5, name: 'Viernes' },
+                        { id: 6, name: 'Sábado' },
+                        { id: 0, name: 'Domingo' }
+                      ].map(day => (
+                        <div key={day.id} className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                          <label className="relative inline-flex items-center cursor-pointer w-32 shrink-0">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={formValues.horarioDetalles[day.id]?.laboral || false}
+                              onChange={(e) => setFormValues(prev => ({
+                                ...prev,
+                                horarioDetalles: {
+                                  ...prev.horarioDetalles,
+                                  [day.id]: { ...prev.horarioDetalles[day.id], laboral: e.target.checked }
+                                }
+                              }))}
+                            />
+                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-800"></div>
+                            <span className="ml-2 text-sm font-medium text-slate-700">{day.name}</span>
+                          </label>
+                          
+                          <div className="flex-1 flex gap-4 opacity-100 transition-opacity" style={{ opacity: formValues.horarioDetalles[day.id]?.laboral ? 1 : 0.5, pointerEvents: formValues.horarioDetalles[day.id]?.laboral ? 'auto' : 'none' }}>
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Entrada</label>
+                              <input
+                                type="time"
+                                required={formValues.horarioDetalles[day.id]?.laboral}
+                                value={formValues.horarioDetalles[day.id]?.inicio || ''}
+                                onChange={e => setFormValues(prev => ({
+                                  ...prev,
+                                  horarioDetalles: {
+                                    ...prev.horarioDetalles,
+                                    [day.id]: { ...prev.horarioDetalles[day.id], inicio: e.target.value }
+                                  }
+                                }))}
+                                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-slate-500 outline-none"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="block text-xs font-medium text-slate-500 mb-1">Salida</label>
+                              <input
+                                type="time"
+                                required={formValues.horarioDetalles[day.id]?.laboral}
+                                value={formValues.horarioDetalles[day.id]?.fin || ''}
+                                onChange={e => setFormValues(prev => ({
+                                  ...prev,
+                                  horarioDetalles: {
+                                    ...prev.horarioDetalles,
+                                    [day.id]: { ...prev.horarioDetalles[day.id], fin: e.target.value }
+                                  }
+                                }))}
+                                className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-slate-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>

@@ -83,6 +83,12 @@ const startCronJobs = () => {
           }
         }
 
+        const dayOfWeek = dayjs(hoy).day();
+        const configDia = usuario.horarioDetalles?.[dayOfWeek] || { laboral: false };
+        if (!configDia.laboral) {
+          continue; // El empleado tiene el día libre hoy, no marcar ausencia
+        }
+
         // Si no tiene asistencia, evaluamos si está de vacaciones
         if (!asistenciaHoy) {
           let esVacacion = false;
@@ -155,17 +161,18 @@ const startCronJobs = () => {
           }
         },
         include: {
-          usuario: {
-            include: { horario: true }
-          }
+          usuario: true
         }
       });
 
       let autoSalidasMarcadas = 0;
 
       for (const asistencia of asistenciasPendientes) {
-        if (asistencia.usuario.horario && asistencia.usuario.horario.horaFin) {
-          const horaFinStr = asistencia.usuario.horario.horaFin;
+        const dayOfWeek = dayjs.tz().day();
+        const configDia = asistencia.usuario.horarioDetalles?.[dayOfWeek];
+        
+        if (configDia && configDia.laboral && configDia.fin) {
+          const horaFinStr = configDia.fin;
 
           const fullDateSalidaObj = dayjs.tz(`${hoyStr}T${horaFinStr}`).toDate();
 

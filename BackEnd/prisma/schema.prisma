@@ -50,18 +50,7 @@ model Sede {
   @@map("sedes")
 }
 
-model Horario {
-  id                Int       @id @default(autoincrement())
-  nombre            String    // Ejemplo: "Lunes a Viernes Mañana"
-  horaInicio        String    // Formato "08:00:00"
-  horaFin           String    // Formato "17:00:00"
-  minutosTolerancia Int       @default(0) // Minutos de tolerancia antes de marcar TARDE
-  activo            Boolean   @default(true)
 
-  usuarios          Usuario[]
-
-  @@map("horarios")
-}
 
 model CausaTardanza {
   id          Int      @id @default(autoincrement())
@@ -110,8 +99,8 @@ model Usuario {
   sedeId        Int
   sede          Sede     @relation(fields: [sedeId], references: [id])
 
-  horarioId     Int
-  horario       Horario  @relation(fields: [horarioId], references: [id])
+  horarioDetalles Json? // Configuración detallada de horario por día
+  minutosTolerancia Int @default(15)
 
   asistencias   Asistencia[]
 

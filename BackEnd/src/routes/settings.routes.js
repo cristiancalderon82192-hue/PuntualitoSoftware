@@ -4,10 +4,6 @@ const {
   createSede,
   updateSede,
   toggleSedeStatus,
-  getHorarios,
-  createHorario,
-  updateHorario,
-  toggleHorarioStatus,
   getCausas,
   createCausa,
   updateCausa,
@@ -28,13 +24,6 @@ router.post('/sedes', createSede);
 router.put('/sedes/:id', updateSede);
 router.patch('/sedes/:id/status', toggleSedeStatus);
 
-// =======================
-// RUTAS PARA HORARIOS
-// =======================
-router.get('/horarios', getHorarios);
-router.post('/horarios', createHorario);
-router.put('/horarios/:id', updateHorario);
-router.patch('/horarios/:id/status', toggleHorarioStatus);
 
 // =======================
 // RUTAS PARA CAUSAS

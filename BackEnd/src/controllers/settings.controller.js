@@ -82,82 +82,6 @@ const toggleSedeStatus = async (req, res) => {
 
 
 // ==========================================
-// CRUD HORARIOS
-// ==========================================
-
-const getHorarios = async (req, res) => {
-  try {
-    const horarios = await prisma.horario.findMany();
-    res.json(horarios);
-  } catch (error) {
-    console.error('Error en getHorarios:', error);
-    res.status(500).json({ error: 'Error al obtener horarios' });
-  }
-};
-
-const createHorario = async (req, res) => {
-  try {
-    const { nombre, horaInicio, horaFin, minutosTolerancia } = req.body;
-    
-    const nuevoHorario = await prisma.horario.create({
-      data: {
-        nombre,
-        horaInicio,
-        horaFin,
-        minutosTolerancia: parseInt(minutosTolerancia, 10),
-        activo: true
-      }
-    });
-    
-    res.status(201).json(nuevoHorario);
-  } catch (error) {
-    console.error('Error en createHorario:', error);
-    res.status(500).json({ error: 'Error al crear horario' });
-  }
-};
-
-const updateHorario = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { nombre, horaInicio, horaFin, minutosTolerancia } = req.body;
-
-    const horarioActualizado = await prisma.horario.update({
-      where: { id: Number(id) },
-      data: {
-        nombre,
-        horaInicio,
-        horaFin,
-        minutosTolerancia: parseInt(minutosTolerancia, 10)
-      }
-    });
-
-    res.json(horarioActualizado);
-  } catch (error) {
-    console.error('Error en updateHorario:', error);
-    res.status(500).json({ error: 'Error al actualizar horario' });
-  }
-};
-
-const toggleHorarioStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const horario = await prisma.horario.findUnique({ where: { id: Number(id) } });
-    if (!horario) return res.status(404).json({ error: 'Horario no encontrado' });
-
-    const horarioActualizado = await prisma.horario.update({
-      where: { id: Number(id) },
-      data: { activo: !horario.activo }
-    });
-    
-    res.json(horarioActualizado);
-  } catch (error) {
-    console.error('Error en toggleHorarioStatus:', error);
-    res.status(500).json({ error: 'Error al cambiar estado del horario' });
-  }
-};
-
-// ==========================================
 // CRUD CAUSAS TARDANZA
 // ==========================================
 
@@ -232,10 +156,6 @@ module.exports = {
   createSede,
   updateSede,
   toggleSedeStatus,
-  getHorarios,
-  createHorario,
-  updateHorario,
-  toggleHorarioStatus,
   getCausas,
   createCausa,
   updateCausa,

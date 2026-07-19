@@ -148,7 +148,7 @@ const getAttendances = async (req, res) => {
     const asistencias = await prisma.asistencia.findMany({
       where: whereClause,
       include: {
-        usuario: { select: { nombre: true, apellido: true, documento: true, horaFinAlmuerzo: true, horario: { select: { horaInicio: true } } } },
+        usuario: { select: { nombre: true, apellido: true, documento: true, horaFinAlmuerzo: true, horarioDetalles: true, minutosTolerancia: true } },
         sede: { select: { nombre: true } },
         estado: { select: { nombre: true } }
       },
@@ -181,8 +181,7 @@ const getUsers = async (req, res) => {
     const usuarios = await prisma.usuario.findMany({
       include: {
         rol: true,
-        sede: true,
-        horario: true
+        sede: true
       },
       orderBy: { creadoEn: 'desc' }
     });
@@ -196,7 +195,7 @@ const getUsers = async (req, res) => {
 const createUser = async (req, res) => {
   try {
     const { 
-      documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
+      documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioDetalles, minutosTolerancia,
       horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor,
       enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras, fechaInicioLabores
     } = req.body;
@@ -211,7 +210,8 @@ const createUser = async (req, res) => {
       contrasena: hashedPassword,
       rolId: Number(rolId),
       sedeId: Number(sedeId),
-      horarioId: Number(horarioId),
+      horarioDetalles: horarioDetalles || null,
+      minutosTolerancia: minutosTolerancia ? Number(minutosTolerancia) : 15,
       horaInicioAlmuerzo: horaInicioAlmuerzo || null,
       horaFinAlmuerzo: horaFinAlmuerzo || null,
       activo: Boolean(activo),
@@ -241,7 +241,7 @@ const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { 
-      documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioId, 
+      documento, nombre, apellido, correo, contrasena, rolId, sedeId, horarioDetalles, minutosTolerancia,
       horaInicioAlmuerzo, horaFinAlmuerzo, activo, rostroDescriptor, fotoBase64,
       enVacaciones, vacacionesInicio, vacacionesFin, puedeAcumularExtras, fechaInicioLabores
     } = req.body;
@@ -253,7 +253,8 @@ const updateUser = async (req, res) => {
       correo,
       rolId: Number(rolId),
       sedeId: Number(sedeId),
-      horarioId: Number(horarioId),
+      horarioDetalles: horarioDetalles !== undefined ? horarioDetalles : undefined,
+      minutosTolerancia: minutosTolerancia !== undefined ? Number(minutosTolerancia) : undefined,
       horaInicioAlmuerzo: horaInicioAlmuerzo || null,
       horaFinAlmuerzo: horaFinAlmuerzo || null,
       enVacaciones: Boolean(enVacaciones),
@@ -354,9 +355,8 @@ const getFormData = async (req, res) => {
   try {
     const roles = await prisma.rol.findMany();
     const sedes = await prisma.sede.findMany({ where: { activo: true } });
-    const horarios = await prisma.horario.findMany({ where: { activo: true } });
-
-    res.json({ roles, sedes, horarios });
+    
+    res.json({ roles, sedes });
   } catch (error) {
     console.error('Error en getFormData:', error);
     res.status(500).json({ error: 'Error al obtener datos para el formulario' });
@@ -436,7 +436,7 @@ const updateManualEntry = async (req, res) => {
 
     const asistencia = await prisma.asistencia.findUnique({
       where: { id: parseInt(id) },
-      include: { usuario: { include: { horario: true } } }
+      include: { usuario: true }
     });
 
     if (!asistencia) {
@@ -444,11 +444,10 @@ const updateManualEntry = async (req, res) => {
     }
 
     const { usuario } = asistencia;
-    const horario = usuario.horario;
-
-    if (!horario) {
-      return res.status(400).json({ error: 'El usuario no tiene horario asignado' });
-    }
+    
+    const dayOfWeek = dayjs.utc(asistencia.fecha).tz().day();
+    const configDia = usuario.horarioDetalles?.[dayOfWeek] || { laboral: false };
+    const isFreeDay = !configDia.laboral; 
 
     const isEmployeeEntry = !!asistencia.latitudEntrada;
     
@@ -460,17 +459,20 @@ const updateManualEntry = async (req, res) => {
     // Solo actualizamos horaEntrada si NO fue hecha por el empleado (por GPS)
     if (!isEmployeeEntry && horaEntrada) {
       const horaIngresoStr = `${horaEntrada}:00`;
-      const datePrefix = dayjs().format('YYYY-MM-DD'); 
-      const limitePuntual = dayjs.tz(`${datePrefix}T${horario.horaInicio}`).add(horario.minutosTolerancia, 'minute');
+      const datePrefix = dayjs.utc(asistencia.fecha).format('YYYY-MM-DD'); 
       const actualIngreso = dayjs.tz(`${datePrefix}T${horaIngresoStr}`);
       
-      const isTarde = actualIngreso.isAfter(limitePuntual);
-      const estadoAsistencia = isTarde ? 'TARDE' : 'PUNTUAL';
+      let estadoAsistencia = 'PUNTUAL';
       
-      if (isTarde) {
-        const horaInicioObj = dayjs.tz(`${datePrefix}T${horario.horaInicio}`);
-        minutosTarde = actualIngreso.diff(horaInicioObj, 'minute');
-        if (minutosTarde < 0) minutosTarde = 0;
+      if (!isFreeDay && configDia.inicio) {
+        const limitePuntual = dayjs.tz(`${datePrefix}T${configDia.inicio}`).add(usuario.minutosTolerancia || 15, 'minute');
+        const isTarde = actualIngreso.isAfter(limitePuntual);
+        if (isTarde) {
+          estadoAsistencia = 'TARDE';
+          const horaInicioObj = dayjs.tz(`${datePrefix}T${configDia.inicio}`);
+          minutosTarde = actualIngreso.diff(horaInicioObj, 'minute');
+          if (minutosTarde < 0) minutosTarde = 0;
+        }
       }
 
       const estadoObj = await prisma.estadoAsistencia.findUnique({ where: { nombre: estadoAsistencia } });

@@ -4,6 +4,9 @@ const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const Holidays = require('date-holidays');
+
+const hd = new Holidays('CO');
 
 dayjs.extend(customParseFormat);
 dayjs.extend(utc);
@@ -50,10 +53,13 @@ const getAttendanceStatus = async (req, res) => {
       };
     }
 
+    const dayOfWeek = dayjs.tz().day();
+    const configDia = usuario?.horarioDetalles?.[dayOfWeek] || { laboral: false };
+    
     const timeLimits = {
       horaInicioAlmuerzo: null,
       horaFinAlmuerzo: null,
-      horaFinJornada: usuario?.horario?.horaFin
+      horaFinJornada: configDia.laboral ? configDia.fin : null
     };
 
     if (!asistencia) {
@@ -144,22 +150,29 @@ const checkIn = async (req, res) => {
       include: { estado: true }
     });
 
-    const horario = usuario.horario;
+    const dayOfWeek = dayjs.tz().day();
+    const isHoliday = hd.isHoliday(new Date(dayjs.tz().format('YYYY-MM-DD') + 'T12:00:00Z'));
+    const horarioDetalles = usuario.horarioDetalles || {};
+    const configDia = horarioDetalles[dayOfWeek] || { laboral: false };
+    const isFreeDay = !configDia.laboral || isHoliday;
+
     if (action === 'ENTRADA') {
       if (asistenciaExistente && asistenciaExistente.horaEntrada) return res.status(400).json({ error: 'Ya registraste tu llegada hoy' });
-      if (!horario) return res.status(400).json({ error: 'No tienes un horario asignado. Contacta al administrador.' });
 
       const horaActualStr = dayjs.tz().format('HH:mm:ss');
-      const limitePuntual = dayjs(horario.horaInicio, 'HH:mm:ss').tz().add(horario.minutosTolerancia, 'minute');
-      const isTarde = dayjs(horaActualStr, 'HH:mm:ss').tz().isAfter(limitePuntual);
-      const estadoAsistencia = isTarde ? 'TARDE' : 'PUNTUAL';
-      
+      let estadoAsistencia = 'PUNTUAL';
       let minutosTarde = 0;
-      if (isTarde) {
-        const horaInicioObj = dayjs(horario.horaInicio, 'HH:mm:ss').tz();
-        const horaActualObj = dayjs(horaActualStr, 'HH:mm:ss').tz();
-        minutosTarde = horaActualObj.diff(horaInicioObj, 'minute');
-        if (minutosTarde < 0) minutosTarde = 0;
+      
+      if (!isFreeDay && configDia.inicio) {
+        const limitePuntual = dayjs(configDia.inicio, 'HH:mm').tz().add(usuario.minutosTolerancia || 15, 'minute');
+        const isTarde = dayjs(horaActualStr, 'HH:mm:ss').tz().isAfter(limitePuntual);
+        if (isTarde) {
+          estadoAsistencia = 'TARDE';
+          const horaInicioObj = dayjs(configDia.inicio, 'HH:mm').tz();
+          const horaActualObj = dayjs(horaActualStr, 'HH:mm:ss').tz();
+          minutosTarde = horaActualObj.diff(horaInicioObj, 'minute');
+          if (minutosTarde < 0) minutosTarde = 0;
+        }
       }
       
       const estadoObj = await prisma.estadoAsistencia.findUnique({ where: { nombre: estadoAsistencia } });
@@ -237,18 +250,27 @@ const checkIn = async (req, res) => {
       if (asistenciaExistente.horaSalida) return res.status(400).json({ error: 'Ya registraste tu salida' });
       
       let minutosExtra = 0;
-      if (horario && horario.horaFin && usuario.puedeAcumularExtras) {
+      if (usuario.puedeAcumularExtras) {
         const horaActualObj = dayjs().tz();
-        const horaFinArr = horario.horaFin.split(':');
-        let limiteSalidaObj = dayjs().tz()
-          .hour(parseInt(horaFinArr[0]))
-          .minute(parseInt(horaFinArr[1]))
-          .second(parseInt(horaFinArr[2] || 0));
         
-        const diffMinutes = horaActualObj.diff(limiteSalidaObj, 'minute');
-        if (diffMinutes > 0) {
-          minutosExtra = diffMinutes;
+        if (isFreeDay) {
+          if (asistenciaExistente.horaEntrada) {
+            const horaEntradaObj = dayjs(asistenciaExistente.horaEntrada).tz();
+            minutosExtra = horaActualObj.diff(horaEntradaObj, 'minute');
+          }
+        } else if (configDia.fin) {
+          const horaFinArr = configDia.fin.split(':');
+          let limiteSalidaObj = dayjs().tz()
+            .hour(parseInt(horaFinArr[0]))
+            .minute(parseInt(horaFinArr[1]))
+            .second(parseInt(horaFinArr[2] || 0));
+          
+          const diffMinutes = horaActualObj.diff(limiteSalidaObj, 'minute');
+          if (diffMinutes > 0) {
+            minutosExtra = diffMinutes;
+          }
         }
+        if (minutosExtra < 0) minutosExtra = 0;
       }
 
       const asistenciaActualizada = await prisma.asistencia.update({

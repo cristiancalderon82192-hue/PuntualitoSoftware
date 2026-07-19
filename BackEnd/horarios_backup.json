@@ -1,0 +1,130 @@
+[
+  {
+    "id": 1,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 4,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 5,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 6,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 7,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 8,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 9,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 10,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 11,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 12,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 13,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 14,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 15,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 17,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 18,
+    "horarioId": 1,
+    "horarioNombre": "Turno Comerciales ",
+    "horaInicio": "08:00:00",
+    "horaFin": "17:00:00",
+    "minutosTolerancia": 15
+  },
+  {
+    "id": 19,
+    "horarioId": 2,
+    "horarioNombre": "Turno logistica",
+    "horaInicio": "07:00:00",
+    "horaFin": "17:00",
+    "minutosTolerancia": 15
+  }
+]

@@ -8,34 +8,28 @@ export default function AdminConfig() {
   const [activeTab, setActiveTab] = useState('sedes');
   
   const [sedes, setSedes] = useState([]);
-  const [horarios, setHorarios] = useState([]);
   const [causas, setCausas] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modals state
   const [isSedeModalOpen, setIsSedeModalOpen] = useState(false);
-  const [isHorarioModalOpen, setIsHorarioModalOpen] = useState(false);
   const [isCausaModalOpen, setIsCausaModalOpen] = useState(false);
   
   const [editingSede, setEditingSede] = useState(null);
-  const [editingHorario, setEditingHorario] = useState(null);
   const [editingCausa, setEditingCausa] = useState(null);
 
   // Form states
   const [sedeForm, setSedeForm] = useState({ nombre: '', direccion: '', latitud: '', longitud: '', radioPermitido: '' });
-  const [horarioForm, setHorarioForm] = useState({ nombre: '', horaInicio: '', horaFin: '', minutosTolerancia: '' });
   const [causaForm, setCausaForm] = useState({ nombre: '' });
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [resSedes, resHorarios, resCausas] = await Promise.all([
+      const [resSedes, resCausas] = await Promise.all([
         api.get('/admin/settings/sedes'),
-        api.get('/admin/settings/horarios'),
         api.get('/admin/settings/causas')
       ]);
       setSedes(resSedes.data);
-      setHorarios(resHorarios.data);
       setCausas(resCausas.data);
     } catch (error) {
       console.error('Error cargando configuración:', error);
@@ -92,48 +86,6 @@ export default function AdminConfig() {
     }
   };
 
-  // ==========================
-  // HORARIOS HANDLERS
-  // ==========================
-  const openHorarioModal = (horario = null) => {
-    if (horario) {
-      setEditingHorario(horario);
-      setHorarioForm({
-        nombre: horario.nombre,
-        horaInicio: horario.horaInicio,
-        horaFin: horario.horaFin,
-        minutosTolerancia: horario.minutosTolerancia
-      });
-    } else {
-      setEditingHorario(null);
-      setHorarioForm({ nombre: '', horaInicio: '08:00', horaFin: '17:00', minutosTolerancia: '15' });
-    }
-    setIsHorarioModalOpen(true);
-  };
-
-  const closeHorarioModal = () => setIsHorarioModalOpen(false);
-
-  const handleHorarioSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingHorario) {
-        await api.put(`/admin/settings/horarios/${editingHorario.id}`, horarioForm);
-      } else {
-        await api.post('/admin/settings/horarios', horarioForm);
-      }
-      await loadData();
-      closeHorarioModal();
-    } catch (error) {
-      alert('Error guardando horario');
-    }
-  };
-
-  const toggleHorarioStatus = async (id) => {
-    if (window.confirm('¿Cambiar estado de este horario?')) {
-      await api.patch(`/admin/settings/horarios/${id}/status`);
-      loadData();
-    }
-  };
 
   // ==========================
   // CAUSAS HANDLERS
@@ -184,14 +136,13 @@ export default function AdminConfig() {
           <button 
             onClick={() => {
               if (activeTab === 'sedes') openSedeModal();
-              else if (activeTab === 'horarios') openHorarioModal();
               else openCausaModal();
             }}
             className="flex items-center justify-center space-x-2 bg-slate-800 text-white px-5 py-2.5 rounded-xl hover:bg-slate-700 transition-colors shadow-sm font-medium"
           >
             <Plus className="w-5 h-5" />
             <span>
-              {activeTab === 'sedes' ? 'Nueva Sede' : activeTab === 'horarios' ? 'Nuevo Horario' : 'Nueva Causa'}
+              {activeTab === 'sedes' ? 'Nueva Sede' : 'Nueva Causa'}
             </span>
           </button>
         </div>
@@ -207,15 +158,7 @@ export default function AdminConfig() {
             <MapPin className="w-4 h-4" />
             <span>Sedes</span>
           </button>
-          <button
-            onClick={() => setActiveTab('horarios')}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'horarios' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Horarios</span>
-          </button>
+
           <button
             onClick={() => setActiveTab('causas')}
             className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
@@ -283,54 +226,7 @@ export default function AdminConfig() {
               </div>
             )}
 
-            {activeTab === 'horarios' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-500 uppercase tracking-wider">
-                      <th className="px-6 py-4">Nombre del Horario</th>
-                      <th className="px-6 py-4">Rango</th>
-                      <th className="px-6 py-4">Tolerancia</th>
-                      <th className="px-6 py-4">Estado</th>
-                      <th className="px-6 py-4 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {horarios.map((horario) => (
-                      <tr key={horario.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-800">
-                          {horario.nombre}
-                        </td>
-                        <td className="px-6 py-4 text-slate-600 font-mono text-sm">
-                          {horario.horaInicio} - {horario.horaFin}
-                        </td>
-                        <td className="px-6 py-4 text-slate-600 text-sm">
-                          {horario.minutosTolerancia} min
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                            horario.activo ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'
-                          }`}>
-                            {horario.activo ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          <button onClick={() => openHorarioModal(horario)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => toggleHorarioStatus(horario.id)} className={`p-2 rounded-lg ${horario.activo ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}>
-                            {horario.activo ? <Trash2 className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {horarios.length === 0 && (
-                      <tr><td colSpan="5" className="px-6 py-10 text-center text-slate-500">No hay horarios registrados.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
+
 
             {activeTab === 'causas' && (
               <div className="overflow-x-auto">
@@ -430,52 +326,7 @@ export default function AdminConfig() {
         )}
       </AnimatePresence>
 
-      {/* MODAL HORARIOS */}
-      <AnimatePresence>
-        {isHorarioModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
-            >
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="text-lg font-bold text-slate-800">
-                  {editingHorario ? 'Editar Horario' : 'Nuevo Horario'}
-                </h3>
-                <button onClick={closeHorarioModal} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <form onSubmit={handleHorarioSubmit} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Horario</label>
-                  <input required type="text" placeholder="Ej: Lunes a Viernes" value={horarioForm.nombre} onChange={e => setHorarioForm({...horarioForm, nombre: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Hora Inicio</label>
-                    <input required type="time" step="2" value={horarioForm.horaInicio} onChange={e => setHorarioForm({...horarioForm, horaInicio: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Hora Fin</label>
-                    <input required type="time" step="2" value={horarioForm.horaFin} onChange={e => setHorarioForm({...horarioForm, horaFin: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Minutos Tolerancia</label>
-                  <input required type="number" value={horarioForm.minutosTolerancia} onChange={e => setHorarioForm({...horarioForm, minutosTolerancia: e.target.value})} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none" />
-                </div>
-                <div className="pt-4 flex justify-end space-x-3">
-                  <button type="button" onClick={closeHorarioModal} className="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg">Cancelar</button>
-                  <button type="submit" className="px-4 py-2 text-white bg-slate-800 rounded-lg">{editingHorario ? 'Guardar' : 'Crear Horario'}</button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+
 
       {/* MODAL CAUSAS */}
       <AnimatePresence>
