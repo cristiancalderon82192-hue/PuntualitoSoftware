@@ -273,6 +273,17 @@ const checkPastAbsences = async (daysBack = 15) => {
         const userCreated = dayjs(usuario.creadoEn).tz().format('YYYY-MM-DD');
         if (fechaCheckStr < userCreated) continue;
 
+        // Verificar fecha de inicio de labores
+        if (usuario.fechaInicioLabores) {
+          const fechaInicio = dayjs.utc(usuario.fechaInicioLabores).tz(EMPRESA_TZ, true).startOf('day');
+          if (fechaCheckTz.isBefore(fechaInicio)) continue;
+        }
+
+        // Verificar horarioDetalles para este día de la semana
+        const dayOfWeek = fechaCheckTz.day();
+        const configDia = usuario.horarioDetalles?.[dayOfWeek] || { laboral: false };
+        if (!configDia.laboral) continue;
+
         const asistencia = await prisma.asistencia.findFirst({
           where: {
             usuarioId: usuario.id,
