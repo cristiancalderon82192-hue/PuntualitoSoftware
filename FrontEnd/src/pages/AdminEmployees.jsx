@@ -458,6 +458,23 @@ export default function AdminEmployees() {
                                 className="w-full px-2 py-1.5 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-slate-500 outline-none"
                               />
                             </div>
+                            <div className="flex items-end pb-1">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="rounded border-slate-300 text-slate-800 focus:ring-slate-800"
+                                  checked={formValues.horarioDetalles[day.id]?.tieneAlmuerzo ?? true}
+                                  onChange={e => setFormValues(prev => ({
+                                    ...prev,
+                                    horarioDetalles: {
+                                      ...prev.horarioDetalles,
+                                      [day.id]: { ...prev.horarioDetalles[day.id], tieneAlmuerzo: e.target.checked }
+                                    }
+                                  }))}
+                                />
+                                <span className="text-xs font-medium text-slate-600">Almuerzo</span>
+                              </label>
+                            </div>
                           </div>
                         </div>
                       ))}

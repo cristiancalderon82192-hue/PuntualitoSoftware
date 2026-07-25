@@ -36,7 +36,11 @@ const getAttendanceStatus = async (req, res) => {
       orderBy: { nombre: 'asc' }
     });
 
-    const tieneAlmuerzo = true; // El almuerzo está disponible para todos
+    const dayOfWeek = dayjs.tz().day();
+    const configDia = usuario?.horarioDetalles?.[dayOfWeek] || { laboral: false };
+    
+    // Si la configuración del día incluye 'tieneAlmuerzo', se respeta. Si no, por defecto es true.
+    const tieneAlmuerzo = configDia.tieneAlmuerzo ?? true;
     
     let infoSede = null;
     if (asistencia && asistencia.sede) {
@@ -52,9 +56,6 @@ const getAttendanceStatus = async (req, res) => {
         radioPermitido: usuario.sede.radioPermitido 
       };
     }
-
-    const dayOfWeek = dayjs.tz().day();
-    const configDia = usuario?.horarioDetalles?.[dayOfWeek] || { laboral: false };
     
     const timeLimits = {
       horaInicioAlmuerzo: null,
