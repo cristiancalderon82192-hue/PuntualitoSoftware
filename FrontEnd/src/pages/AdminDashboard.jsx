@@ -171,87 +171,110 @@ export default function AdminDashboard() {
               />
             </div>
 
-            {/* Recent Attendances Table */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.7 }}
-              className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
-            >
-              <div className="px-6 py-5 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800">Registros Recientes</h3>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-500 uppercase tracking-wider">
-                      <th className="px-6 py-4">Empleado</th>
-                      <th className="px-6 py-4">Sede</th>
-                      <th className="px-6 py-4">Entrada</th>
-                      <th className="px-6 py-4">Salida Almuerzo</th>
-                      <th className="px-6 py-4">Entrada Almuerzo</th>
-                      <th className="px-6 py-4">Salida</th>
-                      <th className="px-6 py-4">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {stats.registrosRecientes.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="px-6 py-8 text-center text-slate-500">
-                          Nadie ha marcado asistencia el día de hoy.
-                        </td>
-                      </tr>
-                    ) : (
-                      stats.registrosRecientes.map((registro, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-slate-800">
-                            {registro.usuario.nombre} {registro.usuario.apellido}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600">
-                            {registro.sede.nombre}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
-                            {registro.horaEntrada ? dayjs(registro.horaEntrada).format('hh:mm:ss A') : '--:--'}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
-                            {registro.horaSalidaAlmuerzo ? dayjs(registro.horaSalidaAlmuerzo).format('hh:mm:ss A') : '--:--'}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
-                            {registro.horaEntradaAlmuerzo ? dayjs(registro.horaEntradaAlmuerzo).format('hh:mm:ss A') : '--:--'}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
-                            {registro.horaSalida ? dayjs(registro.horaSalida).format('hh:mm:ss A') : '--:--'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-wrap gap-2 items-center">
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
-                                ${registro.estado.nombre === 'PUNTUAL' 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                  : 'bg-amber-50 text-amber-700 border-amber-200'
-                                }`}
-                              >
-                                {registro.estado.nombre}
-                              </span>
-                              {registro.horaSalidaAlmuerzo && !registro.horaEntradaAlmuerzo && !registro.horaSalida && (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200">
-                                  En Almuerzo
-                                </span>
-                              )}
-                              {registro.horaSalida && (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-100 text-slate-600 border-slate-200">
-                                  Jornada Finalizada
-                                </span>
-                              )}
-                            </div>
-                          </td>
+            {/* Recent Attendances by Sede */}
+            {(() => {
+              const registrosPorSede = (stats.registrosRecientes || []).reduce((acc, registro) => {
+                const sedeNombre = registro.sede?.nombre || 'Sin Sede';
+                if (!acc[sedeNombre]) acc[sedeNombre] = [];
+                acc[sedeNombre].push(registro);
+                return acc;
+              }, {});
+
+              const sedesNombres = Object.keys(registrosPorSede);
+
+              if (sedesNombres.length === 0) {
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.7 }}
+                    className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6"
+                  >
+                    <div className="px-6 py-5 border-b border-slate-100">
+                      <h3 className="text-lg font-bold text-slate-800">Registros Recientes</h3>
+                    </div>
+                    <div className="p-8 text-center text-slate-500">
+                      Nadie ha marcado asistencia el día de hoy.
+                    </div>
+                  </motion.div>
+                );
+              }
+
+              return sedesNombres.map((sedeNombre, index) => (
+                <motion.div 
+                  key={sedeNombre}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.7 + (index * 0.1) }}
+                  className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6"
+                >
+                  <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-slate-800">Registros Recientes - {sedeNombre}</h3>
+                    <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-medium">
+                      {registrosPorSede[sedeNombre].length} {registrosPorSede[sedeNombre].length === 1 ? 'registro' : 'registros'}
+                    </span>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-500 uppercase tracking-wider">
+                          <th className="px-6 py-4">Empleado</th>
+                          <th className="px-6 py-4">Entrada</th>
+                          <th className="px-6 py-4">Salida Almuerzo</th>
+                          <th className="px-6 py-4">Entrada Almuerzo</th>
+                          <th className="px-6 py-4">Salida</th>
+                          <th className="px-6 py-4">Estado</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {registrosPorSede[sedeNombre].map((registro, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 font-medium text-slate-800">
+                              {registro.usuario.nombre} {registro.usuario.apellido}
+                            </td>
+                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                              {registro.horaEntrada ? dayjs(registro.horaEntrada).format('hh:mm:ss A') : '--:--'}
+                            </td>
+                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                              {registro.horaSalidaAlmuerzo ? dayjs(registro.horaSalidaAlmuerzo).format('hh:mm:ss A') : '--:--'}
+                            </td>
+                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                              {registro.horaEntradaAlmuerzo ? dayjs(registro.horaEntradaAlmuerzo).format('hh:mm:ss A') : '--:--'}
+                            </td>
+                            <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                              {registro.horaSalida ? dayjs(registro.horaSalida).format('hh:mm:ss A') : '--:--'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border
+                                  ${registro.estado.nombre === 'PUNTUAL' 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                  }`}
+                                >
+                                  {registro.estado.nombre}
+                                </span>
+                                {registro.horaSalidaAlmuerzo && !registro.horaEntradaAlmuerzo && !registro.horaSalida && (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-purple-50 text-purple-700 border-purple-200">
+                                    En Almuerzo
+                                  </span>
+                                )}
+                                {registro.horaSalida && (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-100 text-slate-600 border-slate-200">
+                                    Jornada Finalizada
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+              ));
+            })()}
 
             {/* Absent Employees Table */}
             {stats.empleadosAusentes && stats.empleadosAusentes.length > 0 && (
