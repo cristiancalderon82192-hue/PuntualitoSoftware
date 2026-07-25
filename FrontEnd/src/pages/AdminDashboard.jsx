@@ -188,14 +188,17 @@ export default function AdminDashboard() {
                     <tr className="bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-500 uppercase tracking-wider">
                       <th className="px-6 py-4">Empleado</th>
                       <th className="px-6 py-4">Sede</th>
-                      <th className="px-6 py-4">Hora de Entrada</th>
+                      <th className="px-6 py-4">Entrada</th>
+                      <th className="px-6 py-4">Salida Almuerzo</th>
+                      <th className="px-6 py-4">Entrada Almuerzo</th>
+                      <th className="px-6 py-4">Salida</th>
                       <th className="px-6 py-4">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {stats.registrosRecientes.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="px-6 py-8 text-center text-slate-500">
+                        <td colSpan="7" className="px-6 py-8 text-center text-slate-500">
                           Nadie ha marcado asistencia el día de hoy.
                         </td>
                       </tr>
@@ -210,6 +213,15 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 text-slate-600 font-mono text-sm">
                             {registro.horaEntrada ? dayjs(registro.horaEntrada).format('hh:mm:ss A') : '--:--'}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                            {registro.horaSalidaAlmuerzo ? dayjs(registro.horaSalidaAlmuerzo).format('hh:mm:ss A') : '--:--'}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                            {registro.horaEntradaAlmuerzo ? dayjs(registro.horaEntradaAlmuerzo).format('hh:mm:ss A') : '--:--'}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                            {registro.horaSalida ? dayjs(registro.horaSalida).format('hh:mm:ss A') : '--:--'}
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-wrap gap-2 items-center">
