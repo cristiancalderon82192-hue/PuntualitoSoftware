@@ -2,9 +2,12 @@ const prisma = require('../config/db');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const Holidays = require('date-holidays');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
 const path = require('path');
+
+const hd = new Holidays('CO');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -48,7 +51,7 @@ const getDashboardStats = async (req, res) => {
     });
 
     // 4. Ausentes (Usuarios activos sin registro hoy o con registro AUSENTE)
-    const listaAusentes = await prisma.usuario.findMany({
+    const listaAusentesRaw = await prisma.usuario.findMany({
       where: {
         activo: true,
         rol: { nombre: 'EMPLEADO' },
@@ -68,8 +71,21 @@ const getDashboardStats = async (req, res) => {
       select: {
         nombre: true,
         apellido: true,
+        horarioDetalles: true,
         sede: { select: { nombre: true } }
       }
+    });
+
+    const dayOfWeek = dayjs.tz().day();
+    const isHoliday = hd ? hd.isHoliday(new Date(dayjs.tz().format('YYYY-MM-DD') + 'T12:00:00Z')) : false;
+    
+    const listaAusentes = listaAusentesRaw.filter(emp => {
+      // Si hoy es festivo y la empresa no labora los festivos (por defecto asumimos libre si es festivo)
+      // Aunque en Puntualito, los festivos se omiten en la marcación de ausencias.
+      if (isHoliday) return false;
+      
+      const configDia = emp.horarioDetalles?.[dayOfWeek] || { laboral: false };
+      return configDia.laboral;
     });
 
     const ausentes = listaAusentes.length;
