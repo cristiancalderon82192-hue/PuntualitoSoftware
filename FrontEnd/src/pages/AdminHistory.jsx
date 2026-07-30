@@ -386,9 +386,7 @@ export default function AdminHistory() {
         formData.append('evidencia', justificationFile);
       }
 
-      await api.patch(`/attendance/${justifyingAttendance.id}/justify`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.patch(`/attendance/${justifyingAttendance.id}/justify`, formData);
       
       setJustifyingAttendance(null);
       setJustificationText('');

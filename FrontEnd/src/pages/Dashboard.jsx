@@ -167,9 +167,7 @@ export default function Dashboard() {
       formData.append('causa', causaSeleccionada);
       formData.append('tipo', justifyType);
 
-      await api.patch(`/attendance/${asistenciaId}/justify`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.patch(`/attendance/${asistenciaId}/justify`, formData);
       
       setShowJustifyModal(false);
       setSuccessMsg('Asistencia y justificación guardadas correctamente');
