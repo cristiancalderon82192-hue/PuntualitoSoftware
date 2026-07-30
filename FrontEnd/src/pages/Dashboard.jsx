@@ -85,10 +85,11 @@ export default function Dashboard() {
 
   const format12h = (timeStr) => {
     if (!timeStr) return '';
-    if (typeof timeStr === 'string' && (timeStr.includes('T') || timeStr.includes('-'))) {
-      return dayjs(timeStr).format('hh:mm A');
+    if (typeof timeStr === 'string' && timeStr.length <= 8 && timeStr.includes(':')) {
+      return dayjs(`2000-01-01T${timeStr}`).format('hh:mm A');
     }
-    return dayjs(`2000-01-01T${timeStr}`).format('hh:mm A');
+    const d = dayjs(timeStr);
+    return d.isValid() ? d.format('hh:mm A') : 'Invalid';
   };
 
   const handleLogout = () => {
