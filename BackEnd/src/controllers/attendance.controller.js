@@ -165,7 +165,7 @@ const checkIn = async (req, res) => {
       let minutosTarde = 0;
       
       if (!isFreeDay && configDia.inicio) {
-        const limitePuntual = dayjs(configDia.inicio, 'HH:mm').tz().add(usuario.minutosTolerancia || 15, 'minute');
+        const limitePuntual = dayjs(configDia.inicio, 'HH:mm').tz().add(usuario.minutosTolerancia ?? 15, 'minute');
         const isTarde = dayjs(horaActualStr, 'HH:mm:ss').tz().isAfter(limitePuntual);
         if (isTarde) {
           estadoAsistencia = 'TARDE';

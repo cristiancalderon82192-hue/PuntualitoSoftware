@@ -111,7 +111,7 @@ export default function AdminEmployees() {
           3: { laboral: true, inicio: '08:00', fin: '17:00' },
           4: { laboral: true, inicio: '08:00', fin: '17:00' },
           5: { laboral: true, inicio: '08:00', fin: '17:00' },
-          6: { laboral: true, inicio: '08:00', fin: '17:00' },
+          6: { laboral: true, inicio: '08:00', fin: '13:00' },
           0: { laboral: false, inicio: '', fin: '' }
         },
         minutosTolerancia: 15,

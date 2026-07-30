@@ -227,7 +227,7 @@ const createUser = async (req, res) => {
       rolId: Number(rolId),
       sedeId: Number(sedeId),
       horarioDetalles: horarioDetalles || null,
-      minutosTolerancia: minutosTolerancia ? Number(minutosTolerancia) : 15,
+      minutosTolerancia: (minutosTolerancia !== undefined && minutosTolerancia !== null && minutosTolerancia !== '') ? Number(minutosTolerancia) : 15,
       horaInicioAlmuerzo: horaInicioAlmuerzo || null,
       horaFinAlmuerzo: horaFinAlmuerzo || null,
       activo: Boolean(activo),
@@ -481,7 +481,7 @@ const updateManualEntry = async (req, res) => {
       let estadoAsistencia = 'PUNTUAL';
       
       if (!isFreeDay && configDia.inicio) {
-        const limitePuntual = dayjs.tz(`${datePrefix}T${configDia.inicio}`).add(usuario.minutosTolerancia || 15, 'minute');
+        const limitePuntual = dayjs.tz(`${datePrefix}T${configDia.inicio}`).add(usuario.minutosTolerancia ?? 15, 'minute');
         const isTarde = actualIngreso.isAfter(limitePuntual);
         if (isTarde) {
           estadoAsistencia = 'TARDE';

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useGeolocation } from '../hooks/useGeolocation';
 import api from '../services/api';
-import { LogOut, MapPin, Navigation, CheckCircle, AlertCircle, Clock, Camera, UploadCloud, X } from 'lucide-react';
+import { LogOut, MapPin, Navigation, CheckCircle, AlertCircle, Clock, Camera, UploadCloud, X, List, Coffee } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import AttendanceMap from '../components/AttendanceMap';
@@ -26,6 +26,8 @@ export default function Dashboard() {
   const [statusLoading, setStatusLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(dayjs());
   const [causasTardanza, setCausasTardanza] = useState([]);
+  const [asistenciaDia, setAsistenciaDia] = useState(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
 
   const loadStatus = async () => {
     try {
@@ -36,6 +38,7 @@ export default function Dashboard() {
       setSedeInfo(res.data.sede);
       setTimeLimits(res.data.timeLimits);
       if (res.data.causasTardanza) setCausasTardanza(res.data.causasTardanza);
+      if (res.data.asistencia) setAsistenciaDia(res.data.asistencia);
       
       if (res.data.requireJustification && res.data.asistencia) {
         setAsistenciaId(res.data.asistencia.id);
@@ -287,11 +290,7 @@ export default function Dashboard() {
                   )}
 
                   <button
-                    onClick={() => {
-                      if (window.confirm('¿Estás seguro de FINALIZAR TU JORNADA por el día de hoy?')) {
-                        handleCheckIn('SALIDA');
-                      }
-                    }}
+                    onClick={() => setShowSummaryModal(true)}
                     disabled={geoLoading || isSubmitting || successMsg || (timeLimits?.horaFinJornada && currentTime.format('HH:mm') < timeLimits.horaFinJornada.substring(0, 5))}
                     className="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-3 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     title={timeLimits?.horaFinJornada && currentTime.format('HH:mm') < timeLimits.horaFinJornada.substring(0, 5) ? `Disponible desde las ${format12h(timeLimits.horaFinJornada)}` : ''}
@@ -333,6 +332,68 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Historial del Día */}
+        {asistenciaDia && (
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-8">
+            <div className="bg-slate-50 px-5 py-3 border-b border-slate-100 flex items-center space-x-2">
+              <List className="w-5 h-5 text-slate-500" />
+              <h3 className="font-semibold text-slate-700">Tus Registros de Hoy</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3 text-slate-600">
+                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-medium">Hora de Ingreso</span>
+                </div>
+                <span className="text-sm font-bold text-slate-800">
+                  {asistenciaDia.horaEntrada ? format12h(asistenciaDia.horaEntrada) : '--:--'}
+                </span>
+              </div>
+              
+              {tieneAlmuerzo && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 text-slate-600">
+                      <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center">
+                        <Coffee className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <span className="text-sm font-medium">Salida a Almorzar</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-800">
+                      {asistenciaDia.horaSalidaAlmuerzo ? format12h(asistenciaDia.horaSalidaAlmuerzo) : '--:--'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 text-slate-600">
+                      <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
+                        <CheckCircle className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <span className="text-sm font-medium">Regreso de Almorzar</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-800">
+                      {asistenciaDia.horaEntradaAlmuerzo ? format12h(asistenciaDia.horaEntradaAlmuerzo) : '--:--'}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-3 text-slate-600">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                    <LogOut className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <span className="text-sm font-medium">Hora de Salida</span>
+                </div>
+                <span className="text-sm font-bold text-slate-800">
+                  {asistenciaDia.horaSalida ? format12h(asistenciaDia.horaSalida) : '--:--'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mensajes de Error o Éxito */}
         <AnimatePresence mode="wait">
@@ -439,6 +500,72 @@ export default function Dashboard() {
                       <span>Enviar Justificación</span>
                     </>
                   )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Resumen Finalizar Jornada */}
+      <AnimatePresence>
+        {showSummaryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col"
+            >
+              <div className="bg-slate-800 px-6 py-5 flex justify-between items-center text-white">
+                <h3 className="font-bold text-lg">Resumen del Día</h3>
+                <button onClick={() => setShowSummaryModal(false)} className="text-slate-300 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-slate-600 text-sm mb-5 text-center">Revisa tus registros antes de finalizar tu jornada por el día de hoy.</p>
+                
+                <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500 font-medium">Ingreso:</span>
+                    <span className="font-bold text-slate-800">{asistenciaDia?.horaEntrada ? format12h(asistenciaDia.horaEntrada) : '--:--'}</span>
+                  </div>
+                  {tieneAlmuerzo && (
+                    <>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">Salida Almuerzo:</span>
+                        <span className="font-bold text-slate-800">{asistenciaDia?.horaSalidaAlmuerzo ? format12h(asistenciaDia.horaSalidaAlmuerzo) : '--:--'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">Regreso Almuerzo:</span>
+                        <span className="font-bold text-slate-800">{asistenciaDia?.horaEntradaAlmuerzo ? format12h(asistenciaDia.horaEntradaAlmuerzo) : '--:--'}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between items-center text-sm pt-3 border-t border-slate-200">
+                    <span className="text-slate-500 font-medium">Hora Actual (Salida):</span>
+                    <span className="font-bold text-slate-800 text-base">{currentTime.format('hh:mm A')}</span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    setShowSummaryModal(false);
+                    handleCheckIn('SALIDA');
+                  }}
+                  disabled={isSubmitting}
+                  className="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl hover:bg-slate-900 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Sí, Finalizar Jornada</span>
+                </button>
+                <button
+                  onClick={() => setShowSummaryModal(false)}
+                  className="w-full text-slate-500 font-medium py-3 rounded-xl hover:bg-slate-100 transition-colors mt-2"
+                >
+                  Cancelar
                 </button>
               </div>
             </motion.div>
