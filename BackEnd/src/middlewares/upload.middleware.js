@@ -19,11 +19,11 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Aceptar solo imagenes
-  if (file.mimetype.startsWith('image/')) {
+  // Aceptar imagenes y PDFs
+  if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
     cb(null, true);
   } else {
-    cb(new Error('Formato de archivo no válido. Solo se permiten imágenes.'), false);
+    cb(new Error('Formato de archivo no válido. Solo se permiten imágenes o PDF.'), false);
   }
 };
 
