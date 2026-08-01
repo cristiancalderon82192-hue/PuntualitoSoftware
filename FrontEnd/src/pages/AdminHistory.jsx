@@ -820,6 +820,16 @@ export default function AdminHistory() {
             <span className="hidden sm:inline">Ausentismos</span>
             <span className="sm:hidden">Faltas</span>
           </button>
+          <button
+            onClick={() => setActiveTab('justificados')}
+            className={`flex-shrink-0 md:flex-1 px-4 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'justificados' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4 text-yellow-500" />
+            <span className="hidden sm:inline">Faltas Justificadas</span>
+            <span className="sm:hidden">Justificados</span>
+          </button>
         </div>
 
         {/* Filters Panel */}
@@ -1044,7 +1054,7 @@ export default function AdminHistory() {
             <div ref={reportAusentismosRef} className="bg-white rounded-2xl shadow-sm border border-slate-100 w-full min-w-max">
               <div className="p-5 border-b border-slate-100">
                 <h3 className="text-lg font-bold text-slate-800">Reporte de Ausentismos Laborales</h3>
-                <p className="text-sm text-slate-500">Empleados que no registraron su asistencia en el día (Filtrado por fecha y sede)</p>
+                <p className="text-sm text-slate-500">Empleados con FALTAS INJUSTIFICADAS (Filtrado por fecha y sede)</p>
               </div>
               <div className="min-w-full inline-block align-middle">
                 <table className="w-full text-left border-collapse">
@@ -1058,7 +1068,7 @@ export default function AdminHistory() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {processedAttendances.filter(a => a.estado.nombre === 'AUSENTE').map((a) => (
+                    {processedAttendances.filter(a => a.estado.nombre === 'AUSENTE' && !isJustified(a.observaciones)).map((a) => (
                       <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <p className="font-medium text-slate-800">{dayjs.utc(a.fecha).format('DD MMM, YYYY')}</p>
@@ -1137,6 +1147,78 @@ export default function AdminHistory() {
                         </td>
                       </tr>
                     )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'justificados' ? (
+          <div className="space-y-6 overflow-x-auto">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 w-full min-w-max">
+              <div className="p-5 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-800">Reporte de Faltas Justificadas</h3>
+                <p className="text-sm text-slate-500">Historial de inasistencias que fueron justificadas manualmente</p>
+              </div>
+              <div className="min-w-full inline-block align-middle">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      <th className="px-6 py-4">Fecha</th>
+                      <th className="px-6 py-4">Empleado</th>
+                      <th className="px-6 py-4 text-center">Estado</th>
+                      <th className="px-6 py-4">Observaciones / Detalles</th>
+                      <th className="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {processedAttendances.filter(a => a.estado.nombre === 'AUSENTE' && isJustified(a.observaciones)).map((a) => (
+                      <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <p className="font-medium text-slate-800">{dayjs.utc(a.fecha).format('DD MMM, YYYY')}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-slate-800">{a.usuario.nombre} {a.usuario.apellido}</p>
+                          <p className="text-xs text-slate-500 font-mono">{a.usuario.documento} • {a.sede.nombre}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border bg-yellow-50 text-yellow-700 border-yellow-200">
+                            FALTA JUSTIFICADA
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-md">
+                          <p className="italic text-xs border-l-2 pl-2 text-yellow-700 border-yellow-300">
+                            {a.observaciones || 'Justificado'}
+                          </p>
+                          {a.evidenciaUrl && (
+                            <a
+                              href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${a.evidenciaUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={`Evidencia_Justificacion_${dayjs(a.fecha).format('YYYYMMDD')}`}
+                              className="mt-2 inline-flex items-center space-x-1 p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded transition-colors text-xs font-medium border border-blue-200"
+                              title="Descargar evidencia"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>Descargar Evidencia</span>
+                            </a>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setJustifyingAttendance(a);
+                              const isJust = isJustified(a.observaciones);
+                              setJustificationText(isJust ? a.observaciones.replace('Justificado: ', '') : '');
+                              setJustificationFile(null);
+                            }}
+                            className="p-1.5 mr-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
+                            title="Editar Justificación"
+                          >
+                            <ClipboardList className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
