@@ -47,8 +47,14 @@ export default function AdminEmployees() {
           const [endH, endM] = day.fin.split(':').map(Number);
           let diff = (endH * 60 + endM) - (startH * 60 + startM);
           if (diff < 0) diff += 24 * 60; // if shift crosses midnight
-          if (day.tieneAlmuerzo) diff -= lunchMinutes;
-          totalMinutes += diff;
+          
+          if (day.tieneAlmuerzo ?? true) {
+            diff -= lunchMinutes;
+          }
+          
+          if (diff > 0) {
+            totalMinutes += diff;
+          }
         }
       });
     }
