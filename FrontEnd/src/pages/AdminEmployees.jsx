@@ -32,12 +32,14 @@ export default function AdminEmployees() {
     vacacionesInicio: '',
     vacacionesFin: '',
     puedeAcumularExtras: true,
-    fechaInicioLabores: ''
+    fechaInicioLabores: '',
+    minutosAlmuerzo: 60
   });
   const [formError, setFormError] = useState('');
 
   const calculateTotalWeeklyHours = () => {
     let totalMinutes = 0;
+    let lunchMinutes = parseInt(formValues.minutosAlmuerzo) || 0;
     if (formValues.horarioDetalles) {
       Object.values(formValues.horarioDetalles).forEach(day => {
         if (day.laboral && day.inicio && day.fin) {
@@ -45,6 +47,7 @@ export default function AdminEmployees() {
           const [endH, endM] = day.fin.split(':').map(Number);
           let diff = (endH * 60 + endM) - (startH * 60 + startM);
           if (diff < 0) diff += 24 * 60; // if shift crosses midnight
+          if (day.tieneAlmuerzo) diff -= lunchMinutes;
           totalMinutes += diff;
         }
       });
@@ -93,7 +96,8 @@ export default function AdminEmployees() {
         vacacionesInicio: employee.vacacionesInicio ? employee.vacacionesInicio.split('T')[0] : '',
         vacacionesFin: employee.vacacionesFin ? employee.vacacionesFin.split('T')[0] : '',
         puedeAcumularExtras: employee.puedeAcumularExtras !== undefined ? employee.puedeAcumularExtras : true,
-        fechaInicioLabores: employee.fechaInicioLabores ? employee.fechaInicioLabores.split('T')[0] : ''
+        fechaInicioLabores: employee.fechaInicioLabores ? employee.fechaInicioLabores.split('T')[0] : '',
+        minutosAlmuerzo: employee.horarioDetalles?.minutosAlmuerzo ?? 60
       });
     } else {
       setEditingEmployee(null);
@@ -121,7 +125,8 @@ export default function AdminEmployees() {
         vacacionesInicio: '',
         vacacionesFin: '',
         puedeAcumularExtras: true,
-        fechaInicioLabores: ''
+        fechaInicioLabores: '',
+        minutosAlmuerzo: 60
       });
     }
     setIsModalOpen(true);
@@ -133,10 +138,18 @@ export default function AdminEmployees() {
     e.preventDefault();
     setFormError('');
     try {
+      const dataToSave = {
+        ...formValues,
+        horarioDetalles: {
+          ...formValues.horarioDetalles,
+          minutosAlmuerzo: parseInt(formValues.minutosAlmuerzo) || 0
+        }
+      };
+
       if (editingEmployee) {
-        await api.put(`/admin/users/${editingEmployee.id}`, formValues);
+        await api.put(`/admin/users/${editingEmployee.id}`, dataToSave);
       } else {
-        await api.post('/admin/users', formValues);
+        await api.post('/admin/users', dataToSave);
       }
       await loadData();
       handleCloseModal();
@@ -248,8 +261,8 @@ export default function AdminEmployees() {
                         <button
                           onClick={() => handleToggleStatus(emp.id)}
                           className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${emp.activo
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                             }`}
                         >
                           {emp.activo ? 'Activo' : 'Inactivo'}
@@ -395,6 +408,16 @@ export default function AdminEmployees() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Duración del Almuerzo (Minutos)</label>
+                    <input
+                      required type="number" min="0" step="5"
+                      value={formValues.minutosAlmuerzo}
+                      onChange={e => setFormValues({ ...formValues, minutosAlmuerzo: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 outline-none"
+                    />
+                  </div>
+
                   <div className="col-span-1 md:col-span-2 mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                     <h4 className="font-medium text-slate-800 mb-4">Horario Personalizado por Día</h4>
                     <div className="space-y-3">
@@ -424,7 +447,7 @@ export default function AdminEmployees() {
                             <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-800"></div>
                             <span className="ml-2 text-sm font-medium text-slate-700">{day.name}</span>
                           </label>
-                          
+
                           <div className="flex-1 flex gap-4 opacity-100 transition-opacity" style={{ opacity: formValues.horarioDetalles[day.id]?.laboral ? 1 : 0.5, pointerEvents: formValues.horarioDetalles[day.id]?.laboral ? 'auto' : 'none' }}>
                             <div className="flex-1">
                               <label className="block text-xs font-medium text-slate-500 mb-1">Entrada</label>
