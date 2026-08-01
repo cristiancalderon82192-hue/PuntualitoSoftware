@@ -37,12 +37,12 @@ export default function AdminEmployees() {
   });
   const [formError, setFormError] = useState('');
 
-  const calculateTotalWeeklyHours = () => {
+  const getWeeklyHoursString = (horarioDetalles) => {
     let totalMinutes = 0;
-    let lunchMinutes = parseInt(formValues.minutosAlmuerzo) || 0;
-    if (formValues.horarioDetalles) {
-      Object.values(formValues.horarioDetalles).forEach(day => {
-        if (day.laboral && day.inicio && day.fin) {
+    let lunchMinutes = parseInt(horarioDetalles?.minutosAlmuerzo) || 0;
+    if (horarioDetalles) {
+      Object.values(horarioDetalles).forEach(day => {
+        if (typeof day === 'object' && day !== null && day.laboral && day.inicio && day.fin) {
           const [startH, startM] = day.inicio.split(':').map(Number);
           const [endH, endM] = day.fin.split(':').map(Number);
           let diff = (endH * 60 + endM) - (startH * 60 + startM);
@@ -61,6 +61,13 @@ export default function AdminEmployees() {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${hours}h ${minutes}m`;
+  };
+
+  const calculateTotalWeeklyHours = () => {
+    return getWeeklyHoursString({
+      ...formValues.horarioDetalles,
+      minutosAlmuerzo: formValues.minutosAlmuerzo
+    });
   };
 
   const loadData = async () => {
@@ -261,7 +268,7 @@ export default function AdminEmployees() {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm font-medium text-slate-700">{emp.sede.nombre}</p>
-                        <p className="text-xs text-slate-500">Personalizado</p>
+                        <p className="text-xs text-slate-500">{getWeeklyHoursString(emp.horarioDetalles)} semanales</p>
                       </td>
                       <td className="px-6 py-4">
                         <button
