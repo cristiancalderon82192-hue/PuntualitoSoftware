@@ -1096,7 +1096,8 @@ export default function AdminHistory() {
                           <button
                             onClick={() => {
                               setJustifyingAttendance(a);
-                              setJustificationText('');
+                              const isJust = isJustified(a.observaciones);
+                              setJustificationText(isJust ? a.observaciones.replace('Justificado: ', '') : '');
                               setJustificationFile(null);
                             }}
                             className="p-1.5 mr-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
@@ -2027,12 +2028,29 @@ export default function AdminHistory() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Evidencia Adjunta (Opcional)
                 </label>
+                {justifyingAttendance.evidenciaUrl && (
+                  <div className="mb-3 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+                    <p className="text-xs text-emerald-700 font-medium mb-2">✓ Ya existe una evidencia cargada para esta justificación.</p>
+                    <a
+                      href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${justifyingAttendance.evidenciaUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 p-1.5 bg-white text-emerald-600 hover:bg-emerald-100 rounded transition-colors text-xs font-medium border border-emerald-200"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Ver/Descargar Evidencia Actual</span>
+                    </a>
+                  </div>
+                )}
                 <input
                   type="file"
                   accept="image/*,.pdf"
                   onChange={(e) => setJustificationFile(e.target.files[0])}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100"
                 />
+                {justifyingAttendance.evidenciaUrl && (
+                  <p className="text-xs text-slate-400 mt-1">Si subes un archivo nuevo, reemplazará la evidencia actual.</p>
+                )}
               </div>
 
               <div className="pt-4 flex justify-end space-x-3">
