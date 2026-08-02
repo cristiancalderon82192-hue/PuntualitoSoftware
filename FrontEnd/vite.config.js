@@ -12,7 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['logo_puntualito.png'],
       workbox: {
-        maximumFileSizeToCacheInBytes: 5000000, // Aumentado a 5MB
+        maximumFileSizeToCacheInBytes: 15000000, // Aumentado a 15MB para soportar modelos faciales
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}', 'models/*']
       },
       manifest: {
         name: 'Puntualito',

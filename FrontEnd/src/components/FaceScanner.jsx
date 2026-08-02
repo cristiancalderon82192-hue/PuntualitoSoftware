@@ -71,7 +71,7 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
     try {
       const detection = await faceapi.detectSingleFace(
         videoRef.current,
-        new faceapi.TinyFaceDetectorOptions()
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
       ).withFaceLandmarks().withFaceDescriptor();
 
       if (detection) {
@@ -95,7 +95,7 @@ export default function FaceScanner({ onScanSuccess, onCancel, autoScan = false 
     try {
       const detection = await faceapi.detectSingleFace(
         videoRef.current,
-        new faceapi.TinyFaceDetectorOptions()
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })
       ).withFaceLandmarks().withFaceDescriptor();
 
       if (detection) {
